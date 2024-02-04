@@ -11,14 +11,13 @@
     <div id="main-content">
         <div id="container">
             <h1>Math PDF Generator</h1>
-            <form id="pdfForm">
+            <form id="pdfForm" onsubmit="event.preventDefault(); generatePDF(document.getElementById('numPDFs').value);">
                 <label for="numPDFs">Number of PDFs to generate:</label>
-                <input type="number" id="numPDFs" name="numPDFs" min="1" value="1">
-                <button onclick="generatePDF(document.getElementById('numPDFs').value)">Generate PDFs</button>
+                <input type="number" id="numPDFs" name="numPDFs" min="1" value="20">
+                <button type="submit">Generate PDFs</button>
             </form>
-            <div id="progress-bar-container" style="width: 70%; height: 20px; border: 0px solid black; margin-top: 10px;">
-                <div id="progress-bar" style="height: 100%; background-color: rgb(6, 150, 30); width: 0;"></div>
-            </div>
+            <div id="progress-message" style="margin-top: 10px;"></div>
+
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js"></script>

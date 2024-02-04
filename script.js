@@ -8,10 +8,10 @@ function generateRandomFilename(length=10) {
     return result;
 }
 
-function generatePDF(numPDFs=1, batchSize=50) {
+function generatePDF(numPDFs=1, batchSize=20) {
     var operators = ['+', '-', '*', '/'];
     var zip = new JSZip();
-    var progressBar = document.getElementById('progress-bar');
+    var progressMessage = document.getElementById('progress-message');
 
     function generateBatch(startIndex, endIndex) {
         for (var i = startIndex; i < endIndex; i++) {
@@ -51,12 +51,13 @@ function generatePDF(numPDFs=1, batchSize=50) {
                 doc.text((idx + 1) + ") " + answers[idx], 10 + (idx % 3) * 60, 20 + Math.floor((idx % 78) / 3) * 10);
             }
             zip.file(generateRandomFilename() + '.pdf', doc.output('blob'));
-            progressBar.style.width = ((i + 1) / numPDFs) * 100 + '%';
+            progressMessage.textContent = 'Generated ' + (i + 1) + '/' + numPDFs + ' PDFs';
         }
     }
 
-    for (var i = 0; i < numPDFs; i += batchSize) {
-        generateBatch(i, Math.min(i + batchSize, numPDFs));
+    var numBatches = Math.ceil(numPDFs / batchSize);
+    for (var i = 0; i < numBatches; i++) {
+        generateBatch(i * batchSize, Math.min((i + 1) * batchSize, numPDFs));
     }
 
     zip.generateAsync({type:"blob"}).then(function(content) {
@@ -64,6 +65,8 @@ function generatePDF(numPDFs=1, batchSize=50) {
     });
 }
 
-document.getElementById('generateButton').addEventListener('click', function() {
-    generatePDF(5);
+document.getElementById('generateButton').addEventListener('click', function(event) {
+    event.preventDefault();  // This line prevents the form from being submitted
+    progressMessage.textContent = 'Starting PDF generation...';
+    generatePDF(100, 20);  // Generate 100 PDFs in batches of 20
 });
