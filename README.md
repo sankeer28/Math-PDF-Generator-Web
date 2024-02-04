@@ -10,8 +10,8 @@ Live web version of the Math PDF Generator I made in Python
 - Works on both desktop and mobile devices
 
 ## Usage
-
-Simply enter the number of PDFs (live link)[] you want to generate and click the "Generate" button. The PDFs will be generated and automatically downloaded as a zip file.
+Visit [site](https://sankeer28.github.io/Math-PDF-Generator-Web/)
+Simply enter the number of PDFs  you want to generate and click the "Generate" button. The PDFs will be generated and automatically downloaded as a zip file.
 
 ## Limitations
 
