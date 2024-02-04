@@ -1,11 +1,11 @@
 # Math-PDF-Generator-Web
 Live web version of the Math PDF Generator I made in Python
- It allows you to generate up to 50 PDFs at a time, each containing random math problems. The PDFs are then packaged into a zip file and downloaded to your device.
+ It allows you to generate any number of PDFs (limited to your hardware specs), each containing random math problems and corresponding answer key. The PDFs are then packaged into a zip file and downloaded to your device.
 
 ## Features
 
-- Generate up to 50 PDFs at a time
-- Each PDF contains random math problems
+- Generate set number of PDFs at a time
+- Each PDF contains random math problems and answers
 - PDFs are packaged into a zip file for easy download
 - Works on both desktop and mobile devices
 
@@ -15,7 +15,7 @@ Simply enter the number of PDFs  you want to generate and click the "Generate" b
 
 ## Limitations
 
-The maximum number of PDFs you can generate at a time is 50. Generating a large number of PDFs can be resource-intensive and may cause your browser to become unresponsive.
+The maximum number of PDFs you can generate is limited to your device. Generating a large number of PDFs can be resource-intensive and may cause your browser to become unresponsive.
 
 
 ## License
