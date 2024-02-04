@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    height: 100vh;
+    background: linear-gradient(-45deg, darkblue, purple);
+    background-size: 200% 200%;
+    animation: gradient 5s ease infinite;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: white;
+}
+
+#navbar {
+    width: 100%;
+    padding: 11px 0;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+#github-link {
+    color: white;
+    background-color: rgb(128, 128, 128, 0.5);
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    padding: 10px;
+    border-radius: 5px;
+    width: auto; 
+    margin: 10px auto;
+    animation: pulse 2s infinite;
+}
+
+#github-link:hover {
+    background-color: rgb(128, 128, 128, 0.7);
+    transform: scale(1.1);
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#main-content { 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+#container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgb(173, 216, 230, 0.2);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    animation: shake 0.5s ease; 
+}
+
+#pdfForm {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#numPDFs, button {
+    width: 70%; 
+    padding: 20px;
+    margin: 10px 10px 10px;
+    border-radius: 5px;
+    border: none;
+}
+
+#numPDFs {
+    background-color: white;
+    font-size: 20px; 
+    color: black;
+}
+
+button {
+    background-color: rgb(128, 128, 128, 0.5);
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    background-color: rgb(128, 128, 128, 0.7);
+    transform: scale(1.1);
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); 
+}
+
+@keyframes gradient {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+}
+
+@keyframes shake {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translate(-3px, 0px) rotate(1deg); }
+    30% { transform: translate(3px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(1deg); }
+    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translate(3px, 1px) rotate(-1deg); }
+    80% { transform: translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translate(1px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
