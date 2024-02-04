@@ -15,7 +15,7 @@ Simply enter the number of PDFs  you want to generate and click the "Generate" b
 
 ## Limitations
 
-The maximum number of PDFs you can generate at a time is 50. However, the actual number may be less depending on your device's specifications. Generating a large number of PDFs can be resource-intensive and may cause your browser to become unresponsive.
+The maximum number of PDFs you can generate at a time is 50. Generating a large number of PDFs can be resource-intensive and may cause your browser to become unresponsive.
 
 
 ## License
