@@ -10,6 +10,8 @@ Live web version of the Math PDF Generator I made in Python
 - PDFs are packaged into a zip file for easy download
 - Works on both desktop and mobile devices
 - Each PDF has 10 pages | 56-57KB
+- Random file names
+
 <p align="center">
   <img src="https://github.com/sankeer28/Math-PDF-Generator-Web/assets/112449287/8a3b8cb0-57f9-4f5c-ae52-8f782836dcc6" width="300">
   <br>
