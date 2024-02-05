@@ -1,7 +1,7 @@
 
 # [Math-PDF-Generator-Web](https://sankeer28.github.io/Math-PDF-Generator-Web/)
 Live web version of the [Math PDF Generator I made in Python](https://github.com/sankeer28/Math-PDF-Generator)
- It allows you to generate any number of PDFs (limited by your hardware specs), each containing random math problems and corresponding answer key. The PDFs are then packaged into a zip file and downloaded to your device using jsZIP, jsPDF and FileSaver.js.
+ . It allows you to generate any number of PDFs, each containing random math problems and corresponding answers. The PDFs are packaged into a zip file and downloaded to your device using jsZIP, jsPDF and FileSaver.js.
 
 ## Features
 
@@ -9,7 +9,7 @@ Live web version of the [Math PDF Generator I made in Python](https://github.com
 - Each PDF contains random math problems and answers
 - PDFs are packaged into a zip file for easy download
 - Works on both desktop and mobile devices
-- Each PDF has 10 pages | 56-57KB
+- Each PDF has 10 pages 
 - Random file names
 
 <p align="center">
