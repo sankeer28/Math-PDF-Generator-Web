@@ -12,10 +12,12 @@ Live web version of the Math PDF Generator I made in Python
 - Each PDF has 10 pages | 56-57KB
 
 #### Example Question page
-![image](https://github.com/sankeer28/Math-PDF-Generator-Web/assets/112449287/ae8ba619-a30e-425a-9e10-6a673f360309)
+![image](https://github.com/sankeer28/Math-PDF-Generator-Web/assets/112449287/3ca07614-d136-4f90-be82-e966388ec95b)
+
 
 #### Example Answer page
-![image](https://github.com/sankeer28/Math-PDF-Generator-Web/assets/112449287/81da5eec-51cb-4557-9263-c33cb3aba853)
+![image](https://github.com/sankeer28/Math-PDF-Generator-Web/assets/112449287/9406aaea-e355-4446-ad83-b778bd2a5e30)
+
 
 
 ## Usage
