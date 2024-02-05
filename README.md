@@ -1,6 +1,6 @@
 
 # Math-PDF-Generator-Web
-Live web version of the Math PDF Generator I made in Python
+Live web version of the [Math PDF Generator I made in Python](https://github.com/sankeer28/Math-PDF-Generator)
  It allows you to generate any number of PDFs (limited by your hardware specs), each containing random math problems and corresponding answer key. The PDFs are then packaged into a zip file and downloaded to your device using jsZIP, jsPDF and FileSaver.js.
 
 ## Features
