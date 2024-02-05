@@ -25,7 +25,3 @@ Generating a large number of PDFs can be resource-intensive and may take longer.
 - more advanced equations
 - Custom equations based on user input (user inputs format, numbers are randomized)
   
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
