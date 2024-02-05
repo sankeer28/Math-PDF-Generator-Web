@@ -1,12 +1,19 @@
-function generateRandomFilename(length=10) {
-    var result = '';
+
+function generateRandomFilename() {
+    var result = 'math';
+    var numbers = '0123456789';
     var characters = 'abcdefghijklmnopqrstuvwxyz';
+    var numbersLength = numbers.length;
     var charactersLength = characters.length;
-    for (var i = 0; i < length; i++) {
+    for (var i = 0; i < 3; i++) {
+        result += numbers.charAt(Math.floor(Math.random() * numbersLength));
+    }
+    for (var i = 0; i < 4; i++) {
         result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
     return result;
 }
+
 
 function generatePDF(numPDFs=1, batchSize=20) {
     var operators = ['+', '-', '*', '/'];
