@@ -8,6 +8,7 @@ Live web version of the Math PDF Generator I made in Python
 - Each PDF contains random math problems and answers
 - PDFs are packaged into a zip file for easy download
 - Works on both desktop and mobile devices
+- Each PDF has 10 pages | 56-57KB
 
 ## Usage
 Visit [site](https://sankeer28.github.io/Math-PDF-Generator-Web/)
@@ -18,10 +19,11 @@ Simply enter the number of PDFs  you want to generate and click the "Generate PD
 Generating a large number of PDFs can be resource-intensive and may take longer.
 - 1000 PDFs took ~13 seconds | ZIP file size: 54.9 MB
 - 5000 PDFs took ~1 minute after 2 "This page isn't responding" popups | ZIP file size: 274 MB | (why do you need this many)
-- 10000 PDFs (not recommended)
   
 ## Next Steps
 - Nicer PDF formatting
-- more advanced equations
-- Custom equations based on user input (user inputs format, numbers are randomized)
+- more advanced equations (user is able to select for different grade levels)
+- Custom equations (user inputs format, numbers are randomized)
+- Custom number of equations per PDF
+  
   
