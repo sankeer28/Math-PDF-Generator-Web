@@ -22,7 +22,7 @@ function generatePDF(numPDFs=1, batchSize=20) {
                     doc.addPage();
                 }
                 doc.setFontSize(20);
-                doc.text("Random Math Problems", 105, 10, null, null, 'center');
+                doc.text("Math Problems", 105, 10, null, null, 'center');
                 doc.setFontSize(12);
                 for (var j = 0; j < 26; j++) {
                     var numOperands = Math.floor(Math.random() * 4) + 2;
