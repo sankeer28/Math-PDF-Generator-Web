@@ -20,7 +20,11 @@ Generating a large number of PDFs can be resource-intensive and may take longer.
 - 5000 PDFs took ~1 minute after 2 "This page isn't responding" popups | ZIP file size: 274 MB | (why do you need this many)
 - 10000 PDFs (not recommended)
   
-
+## Next Steps
+- Nicer PDF formatting
+- more advanced equations
+- Custom equations based on user input (user inputs format, numbers are randomized)
+  
 
 ## License
 
