@@ -1,4 +1,3 @@
-
 function generateRandomFilename() {
     var result = 'math';
     var numbers = '0123456789';
@@ -14,13 +13,13 @@ function generateRandomFilename() {
     return result;
 }
 
-
 function generatePDF(numPDFs=1, batchSize=20) {
     var operators = ['+', '-', '*', '/'];
     var zip = new JSZip();
     var progressMessage = document.getElementById('progress-message');
 
     function generateBatch(startIndex, endIndex) {
+        var startTime = Date.now(); 
         for (var i = startIndex; i < endIndex; i++) {
             var doc = new jsPDF();
             var answers = [];
@@ -58,8 +57,10 @@ function generatePDF(numPDFs=1, batchSize=20) {
                 doc.text((idx + 1) + ") " + answers[idx], 10 + (idx % 3) * 60, 20 + Math.floor((idx % 78) / 3) * 10);
             }
             zip.file(generateRandomFilename() + '.pdf', doc.output('blob'));
-            progressMessage.textContent = 'Generated ' + (i + 1) + '/' + numPDFs + ' PDFs';
         }
+        var endTime = Date.now(); 
+        var timeTaken = (endTime - startTime) / 1000; 
+        progressMessage.textContent = 'Generated ' + numPDFs + ' PDFs';
     }
 
     var numBatches = Math.ceil(numPDFs / batchSize);
