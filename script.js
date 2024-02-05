@@ -66,7 +66,7 @@ function generatePDF(numPDFs=1, batchSize=20) {
 }
 
 document.getElementById('generateButton').addEventListener('click', function(event) {
-    event.preventDefault();  // This line prevents the form from being submitted
+    event.preventDefault();  
     progressMessage.textContent = 'Starting PDF generation...';
-    generatePDF(100, 20);  // Generate 100 PDFs in batches of 20
+    generatePDF(100, 20);  
 });
