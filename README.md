@@ -44,7 +44,7 @@ Generating a large number of PDFs can be resource-intensive and may take longer.
   
 ## Next Steps
 - Nicer PDF formatting
-- more advanced equations (user is able to select for different grade levels)
+- more advanced equations (user is able to select different grade levels)
 - Custom equations (user inputs format, numbers are randomized)
 - Custom number of equations per PDF
 
