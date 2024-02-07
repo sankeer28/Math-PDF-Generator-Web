@@ -30,16 +30,17 @@ function generatePDF(numPDFs=1, numPages=5, batchSize=20) {
                     var numOperands = Math.floor(Math.random() * 4) + 2;
                     for (var c = 0; c < 3; c++) { 
                         var equation = "";
-                        var operator = ['+', '-', '*', '/'][Math.floor(Math.random() * 4)];
-                        for (var k = 0; k < numOperands; k++) {
-                            equation += Math.floor(Math.random() * 10) + " " + operator + " ";
-                        }
-                        equation = equation.slice(0, -2) + " ="; 
-                        var answer = eval(equation.slice(0, -2)).toFixed(2); 
-                        answers.push(answer);
-                        totalQuestions++; 
-                        doc.setFontSize(12);
-                        doc.text(totalQuestions + ") " + equation, 10 + c*70, 20 + j * 12); 
+                var numOperands = Math.floor(Math.random() * 4) + 2;
+                var operator = ['+', '-', '*', '/'];
+                for (var k = 0; k < numOperands; k++) {
+                    equation += Math.floor(Math.random() * 10) + " " + operator[Math.floor(Math.random() * 4)] + " ";
+                }
+                equation = equation.slice(0, -2) + " ="; 
+                var answer = eval(equation.slice(0, -2)).toFixed(2); 
+                answers.push(answer);
+                totalQuestions++; 
+                doc.setFontSize(12);
+                doc.text(totalQuestions + ") " + equation, 10 + c*70, 20 + j * 12); 
                     }
                 }
             }
