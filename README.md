@@ -11,7 +11,7 @@ Live web version of the [Math PDF Generator I made in Python](https://github.com
 - Works on both desktop and mobile devices
 - Custom number of question pages to a max of 50 pages per pdf 
 - Random file names
-- Cover page with random image
+
 
 <p align="center">
   <img src="https://github.com/sankeer28/Math-PDF-Generator-Web/assets/112449287/3ca07614-d136-4f90-be82-e966388ec95b" width="500">
