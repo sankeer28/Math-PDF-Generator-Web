@@ -9,14 +9,8 @@ Live web version of the [Math PDF Generator I made in Python](https://github.com
 - Each PDF contains random math problems and answers
 - PDFs are packaged into a zip file for easy download
 - Works on both desktop and mobile devices
-- Each PDF has 10 pages 
+- Add any number of question pages to a max of 50 per pdf 
 - Random file names
-
-<p align="center">
-  <img src="https://github.com/sankeer28/Math-PDF-Generator-Web/assets/112449287/8a3b8cb0-57f9-4f5c-ae52-8f782836dcc6" width="300">
-  <br>
-  <b>Minimalistic GUI</b>
-</p>
 
 <p align="center">
   <img src="https://github.com/sankeer28/Math-PDF-Generator-Web/assets/112449287/3ca07614-d136-4f90-be82-e966388ec95b" width="500">
