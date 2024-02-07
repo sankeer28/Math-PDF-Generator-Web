@@ -33,9 +33,7 @@ Simply enter the number of PDFs  you want to generate and click the "Generate PD
 
 ## Limitations
 
-Generating a large number of PDFs can be resource-intensive and may take longer.
-- 1000 PDFs took ~13 seconds | ZIP file size: 54.9 MB
-- 5000 PDFs took ~1 minute after 2 "This page isn't responding" popups | ZIP file size: 274 MB | (why do you need this many)
+Generating a large number of PDFs can be resource-intensive and may take longer. Please be patient.
 
 ## How to get free unlocks for Course Hero (also works for Studocu)
 1. Go to https://coursehero.com/upload
