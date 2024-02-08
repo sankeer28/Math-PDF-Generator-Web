@@ -35,7 +35,12 @@ Simply enter the number of PDFs  you want to generate and click the "Generate PD
 
 Generating a large number of PDFs can be resource-intensive and may take longer. Please be patient.
 
-## How to get free unlocks for Course Hero (also works for Studocu)
+
+
+<details>
+  <summary>Free unlocks for Course Hero</summary>
+  
+ ## How to get free unlocks for Course Hero (also works for Studocu)
 1. Go to https://coursehero.com/upload
 
 2. Make an account if you haven't already
@@ -54,4 +59,7 @@ Note: Upload only 20 documents at a time.
 
 #### Start the repo if you find this useful
   
+  
+</details>
+
   
