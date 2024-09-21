@@ -13,18 +13,28 @@
         <div id="container">
             <h1>Math PDF Generator</h1>
             <h3>Generate Random Math PDFs</h3>
-            <form id="pdfForm" onsubmit="event.preventDefault(); generatePDF(document.getElementById('numPDFs').value, document.getElementById('numPages').value);">
-                <label for="numPDFs">Number of PDFs to generate:</label>
+            <form id="pdfForm" onsubmit="event.preventDefault(); generatePDF();">
+                <label for="operation">Math Operation:</label>
+                <select id="operation" name="operation">
+                    <option value="addition">Addition</option>
+                    <option value="subtraction">Subtraction</option>
+                    <option value="multiplication">Multiplication</option>
+                    <option value="division">Division</option>
+                    <option value="bedmas">BEDMAS</option>
+                    <option value="exponents">Exponents</option>
+                    <option value="mixed">Mixed</option>
+                </select>
+
+                <label for="numPDFs">Number of PDFs:</label>
                 <input type="number" id="numPDFs" name="numPDFs" min="1" value="20">
                 
-                <label for="numPages">Number of Question pages:</label>
+                <label for="numPages">Pages per PDF:</label>
                 <input type="number" id="numPages" name="numPages" min="1" max="50" value="5">
                 
                 <button type="submit">Generate PDFs</button>
             </form>
             
             <div id="progress-message" style="margin-top: 10px;"></div>
-
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js"></script>
