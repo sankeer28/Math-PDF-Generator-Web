@@ -122,7 +122,4 @@ function generatePDF() {
     });
 }
 
-document.getElementById('pdfForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    generatePDF();
-});
+
