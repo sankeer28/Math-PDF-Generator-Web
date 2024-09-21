@@ -116,9 +116,6 @@ button:hover {
     100% {background-position: 0% 50%;}
 }
 
-
-
-
 .container {
     width: 80%;
     padding: 20px;
@@ -130,4 +127,18 @@ button:hover {
         width: 100%;
         padding: 10px;
     }
+}
+
+#operation, #numPDFs, #numPages, button {
+    width: 70%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: none;
+    font-size: 16px;
+}
+
+#operation, #numPDFs, #numPages {
+    background-color: white;
+    color: black;
 }
