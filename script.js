@@ -8,13 +8,67 @@ function generateRandomFilename() {
     return result;
 }
 
+function generateQuestion(operation) {
+    let question = "";
+    let answer = 0;
+    let num1, num2, num3;
 
-function generatePDF(numPDFs=1, numPages=5, batchSize=20) {
+    switch(operation) {
+        case "addition":
+            num1 = Math.floor(Math.random() * 100) + 1;
+            num2 = Math.floor(Math.random() * 100) + 1;
+            question = `${num1} + ${num2} = `;
+            answer = num1 + num2;
+            break;
+        case "subtraction":
+            num1 = Math.floor(Math.random() * 100) + 1;
+            num2 = Math.floor(Math.random() * num1) + 1;
+            question = `${num1} - ${num2} = `;
+            answer = num1 - num2;
+            break;
+        case "multiplication":
+            num1 = Math.floor(Math.random() * 12) + 1;
+            num2 = Math.floor(Math.random() * 12) + 1;
+            question = `${num1} × ${num2} = `;
+            answer = num1 * num2;
+            break;
+        case "division":
+            num2 = Math.floor(Math.random() * 12) + 1;
+            answer = Math.floor(Math.random() * 12) + 1;
+            num1 = num2 * answer;
+            question = `${num1} ÷ ${num2} = `;
+            break;
+        case "bedmas":
+            num1 = Math.floor(Math.random() * 10) + 1;
+            num2 = Math.floor(Math.random() * 10) + 1;
+            num3 = Math.floor(Math.random() * 10) + 1;
+            question = `(${num1} + ${num2}) × ${num3} = `;
+            answer = (num1 + num2) * num3;
+            break;
+        case "exponents":
+            num1 = Math.floor(Math.random() * 5) + 2;
+            num2 = Math.floor(Math.random() * 3) + 2;
+            question = `${num1}^${num2} = `;
+            answer = Math.pow(num1, num2);
+            break;
+        case "mixed":
+            let operations = ["addition", "subtraction", "multiplication", "division", "bedmas", "exponents"];
+            return generateQuestion(operations[Math.floor(Math.random() * operations.length)]);
+    }
+
+    return { question, answer };
+}
+
+function generatePDF() {
+    var numPDFs = document.getElementById('numPDFs').value;
+    var numPages = document.getElementById('numPages').value;
+    var operation = document.getElementById('operation').value;
     var zip = new JSZip();
     var progressMessage = document.getElementById('progress-message');
 
     function generateBatch(startIndex, endIndex) {
-        var startTime = Date.now(); 
+        var startTime = Date.now();
+
         for (var i = startIndex; i < endIndex; i++) {
             var doc = new jsPDF();
             var answers = [];
@@ -26,21 +80,15 @@ function generatePDF(numPDFs=1, numPages=5, batchSize=20) {
                 doc.setFontSize(20);
                 doc.text("Math Problems", 105, 10, null, null, 'center');
                 doc.setFontSize(12);
-                for (var j = 0; j < 23; j++) { 
-                    var numOperands = Math.floor(Math.random() * 4) + 2;
-                    for (var c = 0; c < 3; c++) { 
-                        var equation = "";
-                var numOperands = Math.floor(Math.random() * 4) + 2;
-                var operator = ['+', '-', '*', '/'];
-                for (var k = 0; k < numOperands; k++) {
-                    equation += Math.floor(Math.random() * 10) + " " + operator[Math.floor(Math.random() * 4)] + " ";
-                }
-                equation = equation.slice(0, -2) + " ="; 
-                var answer = eval(equation.slice(0, -2)).toFixed(2); 
-                answers.push(answer);
-                totalQuestions++; 
-                doc.setFontSize(12);
-                doc.text(totalQuestions + ") " + equation, 10 + c*70, 20 + j * 12); 
+                for (var j = 0; j < 23; j++) {
+                    for (var c = 0; c < 3; c++) {
+                        var { question, answer } = generateQuestion(operation);
+
+                        answers.push(answer);
+                        totalQuestions++;
+
+                        doc.setFontSize(12);
+                        doc.text(totalQuestions + ") " + question, 10 + c*70, 20 + j * 12);
                     }
                 }
             }
@@ -52,15 +100,18 @@ function generatePDF(numPDFs=1, numPages=5, batchSize=20) {
                 if (idx != 0 && idx % 81 == 0) {
                     doc.addPage();
                 }
-                doc.text((idx + 1) + ") " + answers[idx], 10 + (idx % 3) * 70, 20 + Math.floor((idx % 81) / 3) * 12); 
+                doc.text((idx + 1) + ") " + answers[idx], 10 + (idx % 3) * 70, 20 + Math.floor((idx % 81) / 3) * 12);
             }
             zip.file(generateRandomFilename() + '.pdf', doc.output('blob'));
         }
-        var endTime = Date.now(); 
-        var timeTaken = (endTime - startTime) / 1000; 
+        var endTime = Date.now();
+
+        var timeTaken = (endTime - startTime) / 1000;
+
         progressMessage.textContent = 'Generated ' + numPDFs + ' PDFs';
     }
 
+    var batchSize = 20;
     var numBatches = Math.ceil(numPDFs / batchSize);
     for (var i = 0; i < numBatches; i++) {
         generateBatch(i * batchSize, Math.min((i + 1) * batchSize, numPDFs));
@@ -71,9 +122,7 @@ function generatePDF(numPDFs=1, numPages=5, batchSize=20) {
     });
 }
 
-document.getElementById('generateButton').addEventListener('click', function(event) {
-    event.preventDefault();  
-    var numPDFs = document.getElementById('numPDFs').value;
-    var numPages = document.getElementById('numPages').value;
-    generatePDF(numPDFs, numPages);  
+document.getElementById('pdfForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    generatePDF();
 });
