@@ -11,7 +11,7 @@ Live web version of the [Math PDF Generator I made in Python](https://github.com
 - Works on both desktop and mobile devices
 - Custom number of question pages to a max of 50 pages per pdf 
 - Random file names
-- Choose from addition, subtraction, multiplication, division, bedmas, exponents, and mixed equations
+- Choose from addition, subtraction, multiplication, division, bedmas, exponents, word problems, brain teasers, and mixed equations
 
 
 <p align="center">
