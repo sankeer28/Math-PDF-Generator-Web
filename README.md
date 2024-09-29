@@ -26,6 +26,24 @@ Live web version of the [Math PDF Generator I made in Python](https://github.com
   <b>Example Answer Page</b>
 </p>
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/cfb96f25-6e66-4e47-a8e2-cc0f18001cf9" width="500">
+  <br>
+  <b>Example Word Problem</b>
+</p>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/55f0f096-e7e2-414f-92ac-390f635dadee" width="500">
+  <br>
+  <b>Example Word Problem</b>
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/066f891f-9999-4f5c-98e6-3b7ee47f57b5" width="500">
+  <br>
+  <b>Example Brain Teaser</b>
+</p>
+
+
 
 
 ## Usage
