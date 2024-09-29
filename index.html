@@ -1,42 +1,64 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>PDF Generator</title>
-    <link rel="stylesheet" type="text/css" href="styles.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Math Problem Generator</title>
+    <link rel="stylesheet" href="styles.css">
+
 </head>
 <body>
-    <div id="navbar">
-        <a id="github-link" href="https://github.com/sankeer28/Math-PDF-Generator-Web">GitHub</a>
-    </div>
-    <div id="main-content">
-        <div id="container">
-            <h1>Math PDF Generator</h1>
-            <h3>Generate Random Math PDFs</h3>
-            <form id="pdfForm" onsubmit="event.preventDefault(); generatePDF();">
-                <label for="operation">Math Operation:</label>
-                <select id="operation" name="operation">
-                    <option value="addition">Addition</option>
-                    <option value="subtraction">Subtraction</option>
-                    <option value="multiplication">Multiplication</option>
-                    <option value="division">Division</option>
-                    <option value="bedmas">BEDMAS</option>
-                    <option value="exponents">Exponents</option>
-                    <option value="mixed">Mixed</option>
-                </select>
-
-                <label for="numPDFs">Number of PDFs:</label>
-                <input type="number" id="numPDFs" name="numPDFs" min="1" value="20">
+    <nav>
+        <div class="container">
+            <a href="https://github.com/sankeer28/Math-PDF-Generator-Web">GitHub</a>
+        </div>
+    </nav>
+    
+    <main class="container">
+        <div class="content-box">
+            <h1>Random Math Problem Generator</h1>
+            <h3>Generate Customized Math PDFs</h3>
+            
+            <form id="pdfForm">
+                <div>
+                    <label for="problemType">Problem Type:</label>
+                    <select id="problemType" name="problemType">
+                        <option value="equations">Equations Only</option>
+                        <option value="word">Word Problems Only</option>
+                        <option value="mixed">Mixed (Alternating Pages)</option>
+                    </select>
+                </div>
                 
-                <label for="numPages">Pages per PDF:</label>
-                <input type="number" id="numPages" name="numPages" min="1" max="50" value="5">
+                <div>
+                    <label for="operation">Math Operation (for equations and standard word problems):</label>
+                    <select id="operation" name="operation">
+                        <option value="addition">Addition</option>
+                        <option value="subtraction">Subtraction</option>
+                        <option value="multiplication">Multiplication</option>
+                        <option value="division">Division</option>
+                        <option value="mixed">Mixed Operations</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="numPDFs">Number of PDFs:</label>
+                    <input type="number" id="numPDFs" name="numPDFs" min="1" value="20">
+                </div>
+                
+                <div>
+                    <label for="numPages">Pages per PDF:</label>
+                    <input type="number" id="numPages" name="numPages" min="1" max="20" value="4">
+                </div>
                 
                 <button type="submit">Generate PDFs</button>
             </form>
             
-            <div id="progress-message" style="margin-top: 10px;"></div>
+            <div id="progress-message"></div>
+            
+           
         </div>
-    </div>
+    </main>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
