@@ -76,6 +76,8 @@ For every 10 documents, you will get 5 unlocks!
 
 Note: Upload only 20 documents at a time.
 
+Problem Type: "Equations only" [PATCHED}
+
 #### Start the repo if you find this useful
   
   
