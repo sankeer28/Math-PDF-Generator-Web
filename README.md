@@ -57,7 +57,7 @@ Generating a large number of PDFs can be resource-intensive and may take longer.
 
 
 <details>
-  <summary>Free unlocks for Course Hero</summary>
+  <summary>Free unlocks for Course Hero ⚠️[no longer working for CH, working on new method] </summary>
   
  ## How to get free unlocks for Course Hero (also works for Studocu)
 1. Go to https://coursehero.com/upload
@@ -76,7 +76,7 @@ For every 10 documents, you will get 5 unlocks!
 
 Note: Upload only 20 documents at a time.
 
-Problem Type: "Equations only" [PATCHED}
+Problem Type: "Equations only" [PATCHED]
 
 #### Start the repo if you find this useful
   
