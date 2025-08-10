@@ -1,8 +1,7 @@
 
 # [Math-PDF-Generator-Web](https://sankeer28.github.io/Math-PDF-Generator-Web/)
 Live web version of the [Math PDF Generator I made in Python](https://github.com/sankeer28/Math-PDF-Generator)
- . It allows you to generate any number of PDFs, each containing random math problems and corresponding answers. The PDFs are packaged into a zip file and downloaded to your device using jsZIP, jsPDF and FileSaver.js. My version of the [Course Hero File Generator](https://herogeneratorpure.com/) that runs locally.
-
+ . It allows you to generate any number of PDFs, each containing random math problems and corresponding answers. The PDFs are packaged into a zip file and downloaded to your device using jsZIP, jsPDF and FileSaver.js. 
 ## Features
 
 - Generate any number of PDFs
@@ -54,33 +53,5 @@ Simply enter the number of PDFs  you want to generate and click the "Generate PD
 
 Generating a large number of PDFs can be resource-intensive and may take longer. Please be patient.
 
-
-
-<details>
-  <summary>Free unlocks for Course Hero ⚠️[no longer working for CH, working on new method] </summary>
-  
- ## How to get free unlocks for Course Hero (also works for Studocu)
-1. Go to https://coursehero.com/upload
-
-2. Make an account if you haven't already
-
-3. Extract/open the .zip
-
-4. Upload the documents to Coursehero
-
-5. Select a random class for the documents
-
-6. Wait for approval (Usually less than 10 minutes)
-
-For every 10 documents, you will get 5 unlocks!
-
-Note: Upload only 20 documents at a time.
-
-Problem Type: "Equations only" [PATCHED]
-
-#### Start the repo if you find this useful
-  
-  
-</details>
 
   
