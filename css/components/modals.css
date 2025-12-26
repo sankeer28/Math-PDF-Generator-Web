@@ -119,6 +119,77 @@
     }
 }
 
+/* GitHub Link */
+.github-link {
+    position: fixed;
+    bottom: var(--spacing-xl);
+    left: var(--spacing-xl);
+    z-index: 1000;
+}
+
+.github-link-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    background-color: rgba(247, 249, 252, 0.85);
+    backdrop-filter: blur(10px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    border: 1px solid var(--border-medium);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    text-decoration: none;
+}
+
+.github-link-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none;
+    border-radius: var(--radius-full);
+    z-index: 1;
+}
+
+[data-theme="dark"] .github-link-btn {
+    background-color: rgba(26, 32, 44, 0.7);
+}
+
+[data-theme="dark"] .github-link-btn::before {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+}
+
+.github-link-btn:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-lg);
+}
+
+.github-link-btn i {
+    font-size: 20px;
+    color: var(--accent-primary);
+    position: relative;
+    z-index: 2;
+}
+
+@media (max-width: 768px) {
+    .github-link {
+        bottom: var(--spacing-md);
+        left: var(--spacing-md);
+    }
+
+    .github-link-btn {
+        width: 44px;
+        height: 44px;
+    }
+}
+
 /* Theme Toggle */
 .theme-toggle {
     position: fixed;
