@@ -3,216 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Generate customized math worksheets for students of all levels with answer keys">
     <title>Math-PDF-Generator</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- External Dependencies -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
+
+    <!-- Main Styles -->
+    <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-    <nav>
-        <div class="container nav-content">
-            <div class="logo">
-                <i class="fas fa-calculator"></i>
-                <span>Math-PDF-Generator</span>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <div class="navbar-brand">
+                <i class="fas fa-graduation-cap"></i>
+                Math-PDF-Generator
             </div>
-            <div class="nav-links">
-                <a href="https://github.com/sankeer28/Math-PDF-Generator-Web" class="nav-link" target="_blank">
-                    <i class="fab fa-github"></i> GitHub
+            <div class="navbar-links">
+                <a href="#" class="navbar-link" onclick="alert('Add your GitHub repository link here!'); return false;">
+                    <i class="fab fa-github"></i>
+                    <span>GitHub</span>
                 </a>
             </div>
         </div>
     </nav>
-    
-    <main class="container">
-        <div class="hero-section">
-            <h1><i class="fas fa-graduation-cap"></i> Math-PDF-Generator</h1>
-            <p class="subtitle">Create professional math worksheets for any grade level with customizable difficulty and subjects</p>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title fade-in-up">
+                <i class="fas fa-graduation-cap"></i>
+                Math-PDF-Generator
+            </h1>
+            <p class="hero-subtitle fade-in-up">Create unlimited customized worksheets for any grade level, complete with answer keys</p>
         </div>
+    </section>
 
-        <div class="generator-container">
+    <!-- Main Generator Section -->
+    <section class="section">
+        <div class="container">
             <form id="pdfForm" class="generator-form">
-                <div class="form-section">
-                    <h3><i class="fas fa-user-graduate"></i> Student Level</h3>
+
+                <!-- Student Level Configuration -->
+                <div class="form-section card fade-in-up">
+                    <h3 class="form-section-title">
+                        <i class="fas fa-graduation-cap"></i>
+                        Student Level
+                    </h3>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="gradeLevel">Grade Level:</label>
-                            <select id="gradeLevel" name="gradeLevel">
-                                <option value="elementary">Elementary (K-5)</option>
-                                <option value="middle">Middle School (6-8)</option>
-                                <option value="high">High School (9-12)</option>
-                                <option value="college">College/Advanced</option>
+                            <label for="gradeLevel" class="form-label">Grade Level</label>
+                            <select id="gradeLevel" class="form-select">
+                                <option value="kindergarten">Kindergarten</option>
+                                <option value="grade1">Grade 1</option>
+                                <option value="grade2">Grade 2</option>
+                                <option value="grade3">Grade 3</option>
+                                <option value="grade4">Grade 4</option>
+                                <option value="grade5">Grade 5</option>
+                                <option value="grade6">Grade 6</option>
+                                <option value="grade7">Grade 7</option>
+                                <option value="grade8">Grade 8</option>
+                                <option value="grade9">Grade 9 (Algebra I)</option>
+                                <option value="grade10">Grade 10 (Geometry)</option>
+                                <option value="grade11">Grade 11 (Algebra II)</option>
+                                <option value="grade12">Grade 12 (Pre-Calc/Calc)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="difficulty">Difficulty: <span id="difficultyLabel">Medium</span></label>
-                            <input type="range" id="difficulty" name="difficulty" min="1" max="3" value="2" class="difficulty-slider">
-                            <div class="slider-labels">
-                                <span>Easy</span>
-                                <span>Medium</span>
-                                <span>Hard</span>
+                            <label for="difficulty" class="form-label">Difficulty Level</label>
+                            <div class="range-group">
+                                <input type="range" id="difficulty" class="range-input" min="1" max="3" value="2">
+                                <div class="range-labels">
+                                    <span>Easy</span>
+                                    <span id="difficultyLabel" class="font-semibold">Medium</span>
+                                    <span>Hard</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <h3><i class="fas fa-book-open"></i> Subject & Content</h3>
+                <!-- Subject & Content Configuration -->
+                <div class="form-section card fade-in-up">
+                    <h3 class="form-section-title">
+                        <i class="fas fa-book"></i>
+                        Subject & Content
+                    </h3>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="subject">Math Subject:</label>
-                            <select id="subject" name="subject">
+                            <label for="subject" class="form-label">Subject</label>
+                            <select id="subject" class="form-select">
                                 <option value="arithmetic">Basic Arithmetic</option>
-                                <option value="algebra">Algebra</option>
-                                <option value="geometry">Geometry</option>
-                                <option value="statistics">Statistics & Probability</option>
-                                <option value="trigonometry">Trigonometry</option>
-                                <option value="calculus">Calculus</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Topics:</label>
-                            <div id="topicSelection" class="topic-selection">
-                                <label class="topic-label">
-                                    <input type="checkbox" value="all" id="topic-all" checked>
-                                    <span class="checkbox-custom"></span>
-                                    All Topics
+                            <label class="form-label">Topics</label>
+                            <div id="topicSelection" class="topic-grid custom-scrollbar">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="topic-all" class="checkbox-input" checked>
+                                    <span class="checkbox-text">All Topics</span>
                                 </label>
                             </div>
-                            <small class="form-help">Select specific topics within the chosen subject, or leave "All Topics" checked for variety.</small>
                         </div>
-                        <div class="form-group">
-                            <label>Operation Types:</label>
-                            <div class="checkbox-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="op-addition" value="addition" checked>
-                                    <span class="checkbox-custom"></span>
-                                    Addition
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="op-subtraction" value="subtraction" checked>
-                                    <span class="checkbox-custom"></span>
-                                    Subtraction
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="op-multiplication" value="multiplication" checked>
-                                    <span class="checkbox-custom"></span>
-                                    Multiplication
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="op-division" value="division" checked>
-                                    <span class="checkbox-custom"></span>
-                                    Division
-                                </label>
-                            </div>
-                            <small class="form-help">Select which operations to include in your worksheets.</small>
+                    </div>
+                    <div class="form-group" id="operationsSection">
+                        <label class="form-label">Operations</label>
+                        <div class="operation-grid">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="op-addition" class="checkbox-input" value="addition" checked>
+                                <span class="checkbox-text">Addition</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="op-subtraction" class="checkbox-input" value="subtraction" checked>
+                                <span class="checkbox-text">Subtraction</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="op-multiplication" class="checkbox-input" value="multiplication" checked>
+                                <span class="checkbox-text">Multiplication</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="op-division" class="checkbox-input" value="division" checked>
+                                <span class="checkbox-text">Division</span>
+                            </label>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <h3><i class="fas fa-cogs"></i> Problem Settings</h3>
+                <!-- Problem Settings -->
+                <div class="form-section card fade-in-up">
+                    <h3 class="form-section-title">
+                        <i class="fas fa-cog"></i>
+                        Problem Settings
+                    </h3>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="problemType">Problem Type:</label>
-                            <select id="problemType" name="problemType">
-                                <option value="equations">Equations Only</option>
+                            <label for="problemType" class="form-label">Problem Type</label>
+                            <select id="problemType" class="form-select">
+                                <option value="equations" selected>Equations Only</option>
                                 <option value="word">Word Problems Only</option>
                                 <option value="mixed">Mixed (Alternating Pages)</option>
-                                <option value="story">Story Problems</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="answerKey">Answer Key:</label>
-                            <select id="answerKey" name="answerKey">
-                                <option value="separate" selected>Separate Page</option>
-                                <option value="inline">Below Each Problem</option>
+                            <label for="answerKey" class="form-label">Answer Key</label>
+                            <select id="answerKey" class="form-select">
+                                <option value="separate">Separate Page</option>
                                 <option value="none">No Answer Key</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <h3><i class="fas fa-file-pdf"></i> Output Settings</h3>
+                <!-- Output Settings -->
+                <div class="form-section card fade-in-up">
+                    <h3 class="form-section-title">
+                        <i class="fas fa-file-pdf"></i>
+                        Output Settings
+                    </h3>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="numPDFs">Number of PDFs:</label>
-                            <input type="number" id="numPDFs" name="numPDFs" min="1" max="100" value="5">
+                            <label for="numPDFs" class="form-label">Number of PDFs</label>
+                            <input type="number" id="numPDFs" class="form-input" value="5" min="1" max="100">
+                            <small class="form-help">Generate multiple unique worksheets (1-100)</small>
                         </div>
                         <div class="form-group">
-                            <label for="numPages">Pages per PDF:</label>
-                            <input type="number" id="numPages" name="numPages" min="1" max="50" value="4">
+                            <label for="numPages" class="form-label">Pages per PDF</label>
+                            <input type="number" id="numPages" class="form-input" value="4" min="1" max="50">
+                            <small class="form-help">Pages in each worksheet (1-50)</small>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="pdfTitle">Worksheet Title:</label>
-                            <input type="text" id="pdfTitle" name="pdfTitle" placeholder="Math Practice Worksheet" value="Math Practice Worksheet">
+                            <label for="pdfTitle" class="form-label form-label-required">Worksheet Title</label>
+                            <input type="text" id="pdfTitle" class="form-input" value="Math Practice Worksheet" placeholder="Enter worksheet title" required>
                         </div>
                         <div class="form-group">
-                            <label for="studentName">Student Name Field:</label>
-                            <select id="studentName" name="studentName">
-                                <option value="yes" selected>Include Name Field</option>
-                                <option value="no">No Name Field</option>
+                            <label for="showTitle" class="form-label">Show Title on PDF</label>
+                            <select id="showTitle" class="form-select">
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
                             </select>
                         </div>
                     </div>
-                </div>
-
-                <div class="form-actions">
-                    <div class="action-row">
-                        <button type="button" id="saveConfigBtn" class="btn btn-secondary">
-                            <i class="fas fa-save"></i> Save Config
-                        </button>
-                        <div class="config-dropdown">
-                            <button type="button" id="loadConfigBtn" class="btn btn-secondary dropdown-toggle">
-                                <i class="fas fa-folder-open"></i> Load Config
-                            </button>
-                            <div id="configDropdown" class="dropdown-menu">
-                                <div class="dropdown-header">Recent Configurations</div>
-                                <div id="recentConfigs" class="config-list"></div>
-                                <div class="dropdown-divider"></div>
-                                <div class="dropdown-header">Templates</div>
-                                <div id="templates" class="config-list"></div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Header Fields</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="showName" class="checkbox-input">
+                                    <span class="checkbox-text">Show Name Field</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="showDate" class="checkbox-input">
+                                    <span class="checkbox-text">Show Date Field</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="showScore" class="checkbox-input">
+                                    <span class="checkbox-text">Show Score Field</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="showGrade" class="checkbox-input">
+                                    <span class="checkbox-text">Show Grade Field</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Question Styling</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="showNumberCircles" class="checkbox-input">
+                                    <span class="checkbox-text">Show Circles Around Question Numbers</span>
+                                </label>
                             </div>
                         </div>
                     </div>
-                    <div class="action-row">
-                        <button type="button" id="previewBtn" class="btn btn-secondary">
-                            <i class="fas fa-eye"></i> Preview
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-download"></i> Generate PDFs
-                        </button>
-                    </div>
                 </div>
+
+                <!-- Action Buttons -->
+                <div class="form-actions fade-in-up">
+                    <button type="button" id="previewBtn" class="btn btn-outline btn-lg">
+                        <i class="fas fa-eye"></i>
+                        Preview
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-download"></i>
+                        Generate Worksheets
+                    </button>
+                </div>
+
             </form>
-            
+
+            <!-- Progress Container -->
             <div id="progress-container" class="progress-container">
-                <div id="progress-bar" class="progress-bar">
+                <div class="progress-bar">
                     <div id="progress-fill" class="progress-fill"></div>
                 </div>
-                <div id="progress-message" class="progress-message"></div>
+                <div id="progress-message" class="progress-message">Initializing...</div>
             </div>
 
-            <div id="preview-container" class="preview-container" style="display: none;">
-                <h3><i class="fas fa-eye"></i> Preview</h3>
-                <div id="preview-content" class="preview-content"></div>
+            <!-- Preview Container -->
+            <div id="preview-container" class="preview-container">
+                <h3 class="preview-title">
+                    <i class="fas fa-eye"></i>
+                    Worksheet Preview
+                </h3>
+                <div id="preview-content" class="preview-content custom-scrollbar"></div>
             </div>
         </div>
+    </section>
 
-    </main>
-
-    <!-- Theme Toggle -->
-    <div class="theme-toggle">
-        <div class="theme-btn theme-matrix" data-theme="matrix" title="Matrix Theme"></div>
-        <div class="theme-btn theme-light-btn" data-theme="light" title="Light Theme"></div>
-        <div class="theme-btn theme-dark-btn" data-theme="dark" title="Dark Theme"></div>
-        <div class="theme-btn theme-educational-btn" data-theme="educational" title="Educational Theme"></div>
+    <!-- PDF Preview Modal -->
+    <div id="pdf-preview-modal" class="pdf-preview-modal" style="display: none;">
+        <div class="pdf-preview-modal-content">
+            <div class="pdf-preview-header">
+                <h3>
+                    <i class="fas fa-file-pdf"></i>
+                    PDF Preview
+                </h3>
+                <button type="button" id="close-pdf-preview" class="pdf-preview-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="pdf-preview-body">
+                <iframe id="pdf-preview-iframe" class="pdf-preview-iframe"></iframe>
+            </div>
+            <div class="pdf-preview-footer">
+                <button type="button" id="download-from-preview" class="btn btn-primary">
+                    <i class="fas fa-download"></i>
+                    Download PDF
+                </button>
+                <button type="button" id="close-pdf-preview-btn" class="btn btn-outline">
+                    <i class="fas fa-times"></i>
+                    Close
+                </button>
+            </div>
+        </div>
     </div>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
-    <script src="script.js"></script>
+
+    <!-- Theme Toggle Button (Fixed Position) -->
+    <div class="theme-toggle">
+        <button type="button" class="theme-toggle-btn" title="Toggle theme">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <!-- Application Script (ES6 Module) -->
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

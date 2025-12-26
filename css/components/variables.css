@@ -1,0 +1,100 @@
+/* =============================================
+   CSS Custom Properties - Professional Theme System
+   ============================================= */
+
+:root {
+    /* Light Theme (Default) - Blue-tinted */
+    --bg-primary: #f7f9fc;
+    --bg-secondary: #eef2f7;
+    --bg-tertiary: #e1e8f0;
+    --bg-elevated: #f7f9fc;
+
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --text-tertiary: #718096;
+
+    --border-light: #cbd5e0;
+    --border-medium: #a0aec0;
+    --border-dark: #718096;
+
+    --accent-primary: #3182ce;
+    --accent-hover: #2c5282;
+    --accent-light: #4299e1;
+
+    --success: #28a745;
+    --success-light: #d4edda;
+    --warning: #ffc107;
+    --warning-light: #fff3cd;
+    --error: #dc3545;
+    --error-light: #f8d7da;
+    --info: #17a2b8;
+    --info-light: #d1ecf1;
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-full: 9999px;
+
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Courier New', Courier, monospace;
+
+    --transition-fast: 150ms ease;
+    --transition-base: 250ms ease;
+    --transition-slow: 350ms ease;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #242424;
+    --bg-tertiary: #2d2d2d;
+    --bg-elevated: #333333;
+
+    --text-primary: #f8f9fa;
+    --text-secondary: #adb5bd;
+    --text-tertiary: #6c757d;
+
+    --border-light: #3d3d3d;
+    --border-medium: #4a4a4a;
+    --border-dark: #5a5a5a;
+
+    --accent-primary: #a0aec0;
+    --accent-hover: #cbd5e0;
+    --accent-light: #718096;
+
+    --success: #48bb78;
+    --success-light: #2d3748;
+    --warning: #ecc94b;
+    --warning-light: #2d3748;
+    --error: #f56565;
+    --error-light: #2d3748;
+    --info: #4299e1;
+    --info-light: #2d3748;
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+}
+
+/* Focus Ring */
+:root {
+    --focus-ring: 0 0 0 3px rgba(49, 130, 206, 0.25);
+}
+
+[data-theme="dark"] {
+    --focus-ring: 0 0 0 3px rgba(66, 153, 225, 0.35);
+}

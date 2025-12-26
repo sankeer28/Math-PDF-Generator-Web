@@ -1,0 +1,336 @@
+/* =============================================
+   Modals & Dropdowns
+   ============================================= */
+
+/* Progress Bar */
+.progress-container {
+    display: none;
+    margin-top: var(--spacing-xl);
+}
+
+.progress-container.show {
+    display: block;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: var(--spacing-md);
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--accent-primary);
+    width: 0%;
+    transition: width var(--transition-base);
+}
+
+.progress-message {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    font-weight: 500;
+}
+
+/* Preview Container */
+.preview-container {
+    display: none;
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background-color: rgba(247, 249, 252, 0.75);
+    backdrop-filter: blur(10px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    position: relative;
+}
+
+.preview-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none;
+    border-radius: var(--radius-lg);
+    z-index: 1;
+}
+
+[data-theme="dark"] .preview-container {
+    background-color: rgba(26, 32, 44, 0.7);
+}
+
+[data-theme="dark"] .preview-container::before {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+}
+
+.preview-container.show {
+    display: block;
+}
+
+.preview-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    font-size: 1.125rem;
+    font-weight: 600;
+    position: relative;
+    z-index: 2;
+}
+
+.preview-content {
+    background-color: var(--bg-primary);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    max-height: 400px;
+    overflow-y: auto;
+    position: relative;
+    z-index: 2;
+}
+
+/* PDF Preview inside preview-content */
+.preview-content iframe {
+    width: 100%;
+    height: 800px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    display: block;
+    background-color: #525659;
+    font-family: inherit;
+}
+
+.preview-content.pdf-mode {
+    max-height: none;
+    padding: 0;
+    overflow: visible;
+}
+
+@media (max-width: 768px) {
+    .preview-content iframe {
+        height: 600px;
+    }
+}
+
+/* Theme Toggle */
+.theme-toggle {
+    position: fixed;
+    bottom: var(--spacing-xl);
+    right: var(--spacing-xl);
+    z-index: 1000;
+}
+
+.theme-toggle-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    background-color: rgba(247, 249, 252, 0.85);
+    backdrop-filter: blur(10px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    border: 1px solid var(--border-medium);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+.theme-toggle-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none;
+    border-radius: var(--radius-full);
+    z-index: 1;
+}
+
+[data-theme="dark"] .theme-toggle-btn {
+    background-color: rgba(26, 32, 44, 0.7);
+}
+
+[data-theme="dark"] .theme-toggle-btn::before {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+}
+
+.theme-toggle-btn:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-lg);
+}
+
+.theme-toggle-btn svg,
+.theme-toggle-btn i {
+    width: 20px;
+    height: 20px;
+    color: var(--accent-primary);
+    position: relative;
+    z-index: 2;
+}
+
+@media (max-width: 768px) {
+    .theme-toggle {
+        bottom: var(--spacing-md);
+        right: var(--spacing-md);
+    }
+
+    .theme-toggle-btn {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/* PDF Preview Modal */
+.pdf-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg);
+    animation: fadeIn 0.2s ease-out;
+}
+
+.pdf-preview-modal-content {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    width: 100%;
+    max-width: 1200px;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.pdf-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.pdf-preview-header h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.pdf-preview-header h3 i {
+    color: var(--accent-primary);
+}
+
+.pdf-preview-close {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.pdf-preview-close:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.pdf-preview-body {
+    flex: 1;
+    overflow: hidden;
+    padding: 0;
+    background-color: var(--bg-secondary);
+}
+
+.pdf-preview-iframe {
+    width: 100%;
+    height: 100%;
+    min-height: 600px;
+    border: none;
+    display: block;
+}
+
+.pdf-preview-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+    border-top: 1px solid var(--border-light);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+[data-theme="dark"] .pdf-preview-modal-content {
+    background-color: var(--bg-primary);
+}
+
+[data-theme="dark"] .pdf-preview-body {
+    background-color: #2d3748;
+}
+
+@media (max-width: 768px) {
+    .pdf-preview-modal {
+        padding: var(--spacing-sm);
+    }
+
+    .pdf-preview-modal-content {
+        max-height: 98vh;
+    }
+
+    .pdf-preview-header {
+        padding: var(--spacing-md);
+    }
+
+    .pdf-preview-header h3 {
+        font-size: 1.125rem;
+    }
+
+    .pdf-preview-iframe {
+        min-height: 500px;
+    }
+
+    .pdf-preview-footer {
+        padding: var(--spacing-md);
+        gap: var(--spacing-sm);
+    }
+
+    .pdf-preview-footer .btn {
+        font-size: 0.875rem;
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+}

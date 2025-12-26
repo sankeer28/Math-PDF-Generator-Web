@@ -1,0 +1,140 @@
+/* =============================================
+   Math-PDF-Generator - Main Stylesheet
+   Professional Design System
+   ============================================= */
+
+/* Import all component styles */
+@import './components/variables.css';
+@import './components/reset.css';
+@import './components/typography.css';
+@import './components/layout.css';
+@import './components/navigation.css';
+@import './components/buttons.css';
+@import './components/forms.css';
+@import './components/cards.css';
+@import './components/modals.css';
+@import './components/animations.css';
+@import './components/utilities.css';
+
+/* =============================================
+   Page-specific styles
+   ============================================= */
+
+.generator-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.form-section {
+    padding: var(--spacing-lg);
+}
+
+.form-section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    position: relative;
+    z-index: 2;
+}
+
+.form-section-title svg,
+.form-section-title i {
+    width: 20px;
+    height: 20px;
+    color: var(--accent-primary);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+    position: relative;
+    z-index: 2;
+}
+
+/* Topic selection grid */
+.topic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--spacing-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    padding: var(--spacing-sm);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+}
+
+/* Operation checkboxes */
+.operation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--spacing-sm);
+}
+
+/* Form actions */
+.form-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: var(--spacing-lg);
+    position: relative;
+    z-index: 2;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .topic-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .operation-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Alert messages */
+.alert {
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    border: 1px solid transparent;
+}
+
+.alert-info {
+    background-color: var(--info-light);
+    color: var(--info);
+    border-color: var(--info);
+}
+
+.alert-success {
+    background-color: var(--success-light);
+    color: var(--success);
+    border-color: var(--success);
+}
+
+.alert-warning {
+    background-color: var(--warning-light);
+    color: var(--warning);
+    border-color: var(--warning);
+}
+
+.alert-error {
+    background-color: var(--error-light);
+    color: var(--error);
+    border-color: var(--error);
+}
