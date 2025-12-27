@@ -37,7 +37,7 @@ import { calculus } from './subjects/calculus.js';
 
 // Configuration Data
 import { DIFFICULTY_MULTIPLIERS, getDifficultyMultiplier, getDifficultyConfig } from './config/difficulty.js';
-import { names, professions, places, items, actions, timeframes, measurements, getRandomItem, getRandomItems } from './config/contextualData.js';
+import { names, professions, places, items, actions, timeframes, measurements, events, seasons, activities, comparisons, getRandomItem, getRandomItems } from './config/contextualData.js';
 
 /**
  * Grade configurations indexed by ID
@@ -88,7 +88,11 @@ export const CONTEXTUAL_DATA = {
     items,
     actions,
     timeframes,
-    measurements
+    measurements,
+    events,
+    seasons,
+    activities,
+    comparisons
 };
 
 /**

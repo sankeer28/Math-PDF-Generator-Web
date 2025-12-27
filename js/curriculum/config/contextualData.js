@@ -38,52 +38,95 @@ export const places = [
 export const items = {
     school: [
         "pencils", "notebooks", "erasers", "rulers", "markers", "textbooks",
-        "folders", "calculators", "crayons", "scissors", "glue sticks", "binders"
+        "folders", "calculators", "crayons", "scissors", "glue sticks", "binders",
+        "highlighters", "pens", "backpacks", "lunchboxes", "pencil cases", "protractors",
+        "compasses", "index cards", "sticky notes", "correction tape"
     ],
 
     food: [
         "apples", "cookies", "sandwiches", "pizzas", "cupcakes", "bagels",
-        "muffins", "donuts", "bananas", "oranges", "grapes", "carrots"
+        "muffins", "donuts", "bananas", "oranges", "grapes", "carrots",
+        "strawberries", "watermelon slices", "granola bars", "pretzels", "chips",
+        "tacos", "burgers", "hot dogs", "nachos", "brownies", "candy bars"
     ],
 
     toys: [
         "action figures", "dolls", "puzzles", "board games", "building blocks",
-        "toy cars", "stuffed animals", "marbles", "yo-yos", "kites", "balls", "jump ropes"
+        "toy cars", "stuffed animals", "marbles", "yo-yos", "kites", "balls", "jump ropes",
+        "trading cards", "model airplanes", "spinning tops", "remote control cars",
+        "video games", "toy robots", "collectible figures", "slinkies"
     ],
 
     technology: [
         "computers", "tablets", "phones", "cameras", "headphones", "speakers",
-        "keyboards", "mice", "chargers", "batteries", "USB drives", "monitors"
+        "keyboards", "mice", "chargers", "batteries", "USB drives", "monitors",
+        "smartwatches", "earbuds", "webcams", "microphones", "routers", "game controllers",
+        "power banks", "drones", "VR headsets", "fitness trackers"
     ],
 
     nature: [
         "flowers", "trees", "rocks", "shells", "leaves", "seeds",
-        "butterflies", "birds", "acorns", "pinecones", "mushrooms", "feathers"
+        "butterflies", "birds", "acorns", "pinecones", "mushrooms", "feathers",
+        "pebbles", "sticks", "berries", "nuts", "wildflowers", "cacti",
+        "moss samples", "bark pieces", "sea glass", "fossils"
     ],
 
     sports: [
         "basketballs", "soccer balls", "tennis balls", "baseball cards", "helmets",
-        "jerseys", "trophies", "medals", "water bottles", "tennis rackets", "baseballs", "footballs"
+        "jerseys", "trophies", "medals", "water bottles", "tennis rackets", "baseballs", "footballs",
+        "hockey pucks", "golf balls", "frisbees", "badminton shuttles", "volleyballs",
+        "bowling pins", "cricket balls", "lacrosse sticks", "skateboards", "roller skates"
     ],
 
     art: [
         "paintbrushes", "canvases", "colored pencils", "sketchbooks", "sculptures",
-        "paintings", "clay pots", "stickers", "origami paper", "craft supplies", "beads", "yarn"
+        "paintings", "clay pots", "stickers", "origami paper", "craft supplies", "beads", "yarn",
+        "watercolor sets", "chalk pastels", "charcoal sticks", "easels", "palettes",
+        "polymer clay", "embroidery hoops", "fabric swatches", "stamp pads", "washi tape"
     ],
 
     books: [
         "novels", "comics", "magazines", "encyclopedias", "poetry books",
-        "cookbooks", "atlases", "dictionaries", "biographies", "textbooks", "graphic novels", "almanacs"
+        "cookbooks", "atlases", "dictionaries", "biographies", "textbooks", "graphic novels", "almanacs",
+        "mystery books", "fantasy books", "science fiction", "manga", "children's books",
+        "reference books", "travel guides", "art books", "history books", "journals"
     ],
 
     clothing: [
         "shirts", "pants", "socks", "shoes", "hats", "jackets",
-        "sweaters", "scarves", "gloves", "belts", "dresses", "sneakers"
+        "sweaters", "scarves", "gloves", "belts", "dresses", "sneakers",
+        "hoodies", "boots", "sandals", "shorts", "skirts", "vests",
+        "mittens", "caps", "ties", "slippers", "leggings", "cardigans"
     ],
 
     office: [
         "pens", "staplers", "paper clips", "folders", "envelopes", "stamps",
-        "notepads", "calendars", "file cabinets", "chairs", "desks", "whiteboards"
+        "notepads", "calendars", "file cabinets", "chairs", "desks", "whiteboards",
+        "binders", "rubber bands", "pushpins", "tape dispensers", "hole punches",
+        "label makers", "desk lamps", "bookends", "clipboards", "pencil holders"
+    ],
+
+    garden: [
+        "tomato plants", "flower pots", "seed packets", "garden gnomes", "watering cans",
+        "shovels", "rakes", "hoses", "wheelbarrows", "gardening gloves", "planters", "fertilizer bags"
+    ],
+
+    music: [
+        "guitars", "drums", "keyboards", "microphones", "sheet music",
+        "music stands", "tuners", "metronomes", "guitar picks", "drum sticks",
+        "ukuleles", "harmonicas", "tambourines", "recorders", "violin bows"
+    ],
+
+    pets: [
+        "dog toys", "cat toys", "pet bowls", "leashes", "collars",
+        "fish tanks", "bird cages", "hamster wheels", "pet beds", "scratching posts",
+        "aquarium decorations", "chew bones", "catnip pouches", "pet treats"
+    ],
+
+    science: [
+        "test tubes", "beakers", "microscope slides", "magnets", "thermometers",
+        "petri dishes", "pipettes", "lab coats", "safety goggles", "graduated cylinders",
+        "fossils", "mineral samples", "circuit boards", "batteries", "light bulbs"
     ]
 };
 
@@ -135,6 +178,41 @@ export const measurements = {
     area: ["square feet", "square meters", "acres", "square inches"],
     time: ["seconds", "minutes", "hours", "days", "weeks", "months", "years"]
 };
+
+/**
+ * Events and occasions for word problems
+ */
+export const events = [
+    "birthday party", "school fair", "bake sale", "science fair", "art show",
+    "sports tournament", "field trip", "concert", "picnic", "carnival",
+    "fundraiser", "talent show", "book fair", "yard sale", "garage sale",
+    "holiday celebration", "class project", "team practice", "club meeting"
+];
+
+/**
+ * Seasons and weather contexts
+ */
+export const seasons = [
+    "spring", "summer", "fall", "winter",
+    "sunny day", "rainy day", "snowy day", "weekend", "holiday"
+];
+
+/**
+ * Activities for dynamic scenarios
+ */
+export const activities = [
+    "collecting", "organizing", "sorting", "counting", "arranging",
+    "preparing", "packing", "setting up", "cleaning up", "decorating",
+    "planning", "assembling", "distributing", "measuring", "calculating"
+];
+
+/**
+ * Comparative scenarios for more complex problems
+ */
+export const comparisons = [
+    "has more than", "has fewer than", "has twice as many as",
+    "has half as many as", "has the same as", "combined have"
+];
 
 /**
  * Get random item from array

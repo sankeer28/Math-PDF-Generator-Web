@@ -31,7 +31,73 @@ export class PDFGenerator {
             .replace(/"/g, '"')  // smart quotes
             .replace(/"/g, '"')
             .replace(/'/g, "'")
-            .replace(/'/g, "'");
+            .replace(/'/g, "'")
+            .replace(/\u00A0/g, ' ')  // non-breaking space
+            .replace(/\s+/g, ' ')     // normalize multiple spaces
+            .trim();
+    }
+
+    // Custom text wrapping that's more reliable than splitTextToSize
+    wrapText(doc, text, maxWidth) {
+        // Use very conservative width (80%) to prevent any stretching/justification
+        const safeMaxWidth = maxWidth * 0.80;
+
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+
+            // Check if single word is too long
+            const wordWidth = doc.getTextWidth(word);
+            if (wordWidth > safeMaxWidth) {
+                // If we have a current line, push it first
+                if (currentLine) {
+                    lines.push(currentLine);
+                    currentLine = '';
+                }
+                // Break the long word into smaller chunks
+                let remainingWord = word;
+                while (remainingWord.length > 0) {
+                    let chunk = '';
+                    for (let j = 0; j < remainingWord.length; j++) {
+                        const testChunk = chunk + remainingWord[j];
+                        if (doc.getTextWidth(testChunk) > safeMaxWidth && chunk) {
+                            break;
+                        }
+                        chunk = testChunk;
+                    }
+                    if (chunk) {
+                        lines.push(chunk);
+                        remainingWord = remainingWord.substring(chunk.length);
+                    } else {
+                        // Even a single character is too wide - force it
+                        lines.push(remainingWord[0]);
+                        remainingWord = remainingWord.substring(1);
+                    }
+                }
+                continue;
+            }
+
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            const testWidth = doc.getTextWidth(testLine);
+
+            if (testWidth > safeMaxWidth && currentLine) {
+                // Line would be too long, start a new line
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+
+        // Add the last line
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+
+        return lines.length > 0 ? lines : [text];
     }
 
     async generatePDFs(formData) {
@@ -51,7 +117,6 @@ export class PDFGenerator {
         } = formData;
 
         this.problemGenerator.setConfig(gradeLevel, difficulty, subject);
-        this.problemGenerator.clearUsedProblems();
 
         const zip = new JSZip();
         const totalPDFs = parseInt(numPDFs);
@@ -61,6 +126,9 @@ export class PDFGenerator {
                 (i / totalPDFs) * 100,
                 `Generating PDF ${i + 1} of ${totalPDFs}...`
             );
+
+            // Clear used problems for each new PDF to allow fresh unique problems
+            this.problemGenerator.clearUsedProblems();
 
             const doc = new jsPDF();
             const answers = [];
@@ -233,15 +301,13 @@ export class PDFGenerator {
 
     addEquationsPage(doc, operations, numProblems, formData, pageNum = 1) {
         const answers = [];
-        doc.setFontSize(13);
-        doc.setTextColor(0, 0, 0);
 
-        // Page margins (matching the border rect at 10, 10, 190, 277)
+        // Page margins (optimized for 2-column layout)
         const pageMargins = {
             left: 15,
             right: 195,
             top: 10,
-            bottom: 280
+            bottom: 282
         };
 
         // Determine if title is shown on this page
@@ -249,17 +315,22 @@ export class PDFGenerator {
         const shouldShowTitle = showTitle === 'all' || (showTitle === 'first' && pageNum === 1);
 
         // Adjust starting position based on whether title is shown
-        const startY = shouldShowTitle ? 55 : 35; // Start higher if no title
-        const leftColumn = 25;
-        const rightColumn = 115;
-        const columnWidth = 85; // Max width for each column
-        const maxQuestionWidth = columnWidth - 20; // Leave space for answer line
-        const lineHeight = 5; // Height per line of text
+        const startY = shouldShowTitle ? 58 : 38;
 
-        // Calculate spacing to fit all problems (accounting for potential multi-line questions)
+        // Two-column layout with clear separation
+        const leftColumnX = 20;
+        const rightColumnX = 110;
+        const columnGap = 12; // Gap between columns
+        const pageWidth = pageMargins.right - pageMargins.left;
+        const columnWidth = (pageWidth - columnGap) / 2; // Each column gets equal width
+        const maxQuestionWidth = columnWidth - 18; // Leave extra space to prevent justification
+
+        const lineHeight = 5; // Line spacing for wrapped text
+
+        // Calculate spacing to fit all problems
         const rowsNeeded = Math.ceil(numProblems / 2);
-        const availableHeight = pageMargins.bottom - startY - 5; // 5mm buffer
-        const baseSpacing = Math.max(18, availableHeight / rowsNeeded); // Minimum 18mm for multi-line support
+        const availableHeight = pageMargins.bottom - startY - 8;
+        const baseSpacing = Math.max(18, availableHeight / rowsNeeded); // Minimum spacing for multi-line questions
 
         let currentLeftY = startY;
         let currentRightY = startY;
@@ -273,16 +344,24 @@ export class PDFGenerator {
             const sanitizedQuestion = this.sanitizeText(question);
 
             const isLeftColumn = (j % 2 === 0);
-            const x = isLeftColumn ? leftColumn : rightColumn;
+            const columnX = isLeftColumn ? leftColumnX : rightColumnX;
             const currentY = isLeftColumn ? currentLeftY : currentRightY;
 
-            // Calculate question width and split if necessary
-            doc.setFontSize(13);
-            const splitQuestion = doc.splitTextToSize(sanitizedQuestion, maxQuestionWidth);
+            // Dynamic font sizing based on question length
+            let fontSize = 11;
+            if (sanitizedQuestion.length > 60) fontSize = 10;
+            if (sanitizedQuestion.length > 90) fontSize = 9.5;
+
+            // Set font BEFORE wrapping to ensure accurate width measurements
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(fontSize);
+
+            // Use custom text wrapping to ensure it fits WITHIN the column width
+            const splitQuestion = this.wrapText(doc, sanitizedQuestion, maxQuestionWidth);
             const questionHeight = splitQuestion.length * lineHeight;
 
             // Check if this problem will fit on the page
-            if (currentY + questionHeight > pageMargins.bottom - 10) {
+            if (currentY + questionHeight > pageMargins.bottom - 8) {
                 console.warn(`Equation ${j + 1} would overflow page, skipping`);
                 continue;
             }
@@ -291,35 +370,53 @@ export class PDFGenerator {
             problemsAdded++;
 
             // Add problem number (with optional circle)
-            doc.setFontSize(11);
+            doc.setFontSize(9);
             if (formData.showNumberCircles) {
-                doc.circle(x - 3, currentY, 3);
-                doc.text(`${problemsAdded}`, x - 3, currentY + 1, null, null, 'center');
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.3);
+                doc.circle(columnX - 2, currentY, 2.5);
+                doc.setTextColor(0, 0, 0);
+                // Use centered text for circle numbers (old API)
+                const numText = `${problemsAdded}`;
+                const numWidth = doc.getTextWidth(numText);
+                doc.text(numText, columnX - 2 - (numWidth / 2), currentY + 0.8);
             } else {
-                doc.text(`${problemsAdded}.`, x - 3, currentY + 1);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`${problemsAdded}.`, columnX - 2, currentY + 1);
             }
 
-            // Add equation with proper wrapping
-            doc.setFontSize(13);
-            doc.text(splitQuestion, x + 8, currentY + 1);
+            // Add equation with proper wrapping - STAYS IN ITS COLUMN
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(fontSize);
+            doc.setTextColor(0, 0, 0);
 
-            // Add answer line after the last line of the question
-            const answerLineY = currentY + (splitQuestion.length - 1) * lineHeight + 1;
+            // Render each line of the wrapped question - USE SIMPLE API WITHOUT OPTIONS
+            for (let lineIdx = 0; lineIdx < splitQuestion.length; lineIdx++) {
+                const lineY = currentY + (lineIdx * lineHeight) + 1;
+                // Simple x, y positioning - NO options object to avoid justification bug
+                doc.text(splitQuestion[lineIdx], columnX + 5, lineY);
+            }
+
+            // Add answer line on the last line of the question
+            const answerLineY = currentY + ((splitQuestion.length - 1) * lineHeight) + 1;
             const lastLineWidth = doc.getTextWidth(splitQuestion[splitQuestion.length - 1]);
             doc.setLineWidth(0.3);
-            const lineStart = x + 8 + lastLineWidth + 3;
-            const lineEnd = Math.min(x + columnWidth, pageMargins.right - 5);
+            doc.setDrawColor(0, 0, 0);
 
-            // Only draw answer line if there's space for it
-            if (lineStart < lineEnd - 10) {
+            const lineStart = columnX + 5 + lastLineWidth + 2;
+            const lineEnd = columnX + columnWidth - 2;
+
+            // Only draw answer line if there's sufficient space within the column
+            if (lineStart < lineEnd - 8) {
                 doc.line(lineStart, answerLineY, lineEnd, answerLineY);
             }
 
             // Update Y position for next problem in this column
+            const spacing = Math.max(baseSpacing, questionHeight + 6);
             if (isLeftColumn) {
-                currentLeftY += Math.max(baseSpacing, questionHeight + 5);
+                currentLeftY += spacing;
             } else {
-                currentRightY += Math.max(baseSpacing, questionHeight + 5);
+                currentRightY += spacing;
             }
         }
 
@@ -328,15 +425,13 @@ export class PDFGenerator {
 
     addWordProblemsPage(doc, operations, numProblems, formData, pageNum = 1) {
         const answers = [];
-        doc.setFontSize(11);
-        doc.setTextColor(0, 0, 0);
 
-        // Page margins (matching the border rect at 10, 10, 190, 277)
+        // Page margins (optimized for maximum content)
         const pageMargins = {
-            left: 15,
-            right: 195,
+            left: 12,
+            right: 198,
             top: 10,
-            bottom: 280
+            bottom: 282
         };
 
         // Determine if title is shown on this page
@@ -344,13 +439,14 @@ export class PDFGenerator {
         const shouldShowTitle = showTitle === 'all' || (showTitle === 'first' && pageNum === 1);
 
         // Adjust starting position based on whether title is shown
-        const startY = shouldShowTitle ? 55 : 35; // Start higher if no title
-        const questionLeftMargin = 40;
-        const maxQuestionWidth = pageMargins.right - questionLeftMargin - 10;
+        const startY = shouldShowTitle ? 58 : 38;
+        const questionLeftMargin = 36;
+        const maxQuestionWidth = pageMargins.right - questionLeftMargin - 15; // Extra margin to prevent justification
+        const lineHeight = 4.5;
 
         // Calculate spacing to fit problems with answer boxes
-        const availableHeight = pageMargins.bottom - startY - 5;
-        const estimatedProblemHeight = 48; // Approximate height per problem including answer box
+        const availableHeight = pageMargins.bottom - startY - 8;
+        const estimatedProblemHeight = 42; // Optimized height per problem
         const maxProblemsToFit = Math.floor(availableHeight / estimatedProblemHeight);
         const actualProblems = Math.min(numProblems, maxProblemsToFit);
         const problemSpacing = availableHeight / actualProblems;
@@ -365,15 +461,23 @@ export class PDFGenerator {
             // Sanitize question text for PDF compatibility
             const sanitizedQuestion = this.sanitizeText(question);
 
-            // Calculate question height
-            doc.setFontSize(11);
-            const splitQuestion = doc.splitTextToSize(sanitizedQuestion, maxQuestionWidth);
-            const questionHeight = splitQuestion.length * 5;
-            const answerBoxHeight = 20;
-            const totalHeight = questionHeight + answerBoxHeight + 10; // 10 for spacing
+            // Dynamic font sizing based on question length
+            let fontSize = 10.5;
+            if (sanitizedQuestion.length > 120) fontSize = 10;
+            if (sanitizedQuestion.length > 180) fontSize = 9.5;
+
+            // Set font BEFORE wrapping to ensure accurate width measurements
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(fontSize);
+
+            // Use custom text wrapping for reliable wrapping
+            const splitQuestion = this.wrapText(doc, sanitizedQuestion, maxQuestionWidth);
+            const questionHeight = splitQuestion.length * lineHeight;
+            const answerBoxHeight = 18;
+            const totalHeight = questionHeight + answerBoxHeight + 8;
 
             // Check if this problem will fit on the page
-            if (currentY + totalHeight > pageMargins.bottom) {
+            if (currentY + totalHeight > pageMargins.bottom - 5) {
                 console.warn(`Word problem ${j + 1} would overflow page, skipping remaining problems`);
                 break;
             }
@@ -382,39 +486,48 @@ export class PDFGenerator {
             problemsAdded++;
 
             // Add problem number (with optional styling)
-            doc.setFontSize(10);
+            doc.setFontSize(9.5);
             if (formData.showNumberCircles) {
-                // Circle style
                 doc.setDrawColor(0, 0, 0);
-                doc.setLineWidth(0.5);
-                doc.circle(27.5, currentY - 4, 5);
+                doc.setLineWidth(0.3);
+                doc.circle(25, currentY - 2, 4);
                 doc.setTextColor(0, 0, 0);
-                doc.text(`${problemsAdded}`, 27.5, currentY - 2, null, null, 'center');
+                // Center text in circle using old API
+                const numText = `${problemsAdded}`;
+                const numWidth = doc.getTextWidth(numText);
+                doc.text(numText, 25 - (numWidth / 2), currentY - 0.5);
             } else {
-                // Simple number with period
                 doc.setTextColor(0, 0, 0);
-                doc.text(`${problemsAdded}.`, 20, currentY - 2);
+                doc.text(`${problemsAdded}.`, 18, currentY);
             }
 
             // Add question with proper wrapping
-            doc.setFontSize(11);
-            doc.text(splitQuestion, questionLeftMargin, currentY);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(fontSize);
+            doc.setTextColor(0, 0, 0);
+
+            // Render each line of the wrapped question - USE SIMPLE API WITHOUT OPTIONS
+            for (let lineIdx = 0; lineIdx < splitQuestion.length; lineIdx++) {
+                const lineY = currentY + (lineIdx * lineHeight);
+                // Simple x, y positioning - NO options object to avoid justification bug
+                doc.text(splitQuestion[lineIdx], questionLeftMargin, lineY);
+            }
 
             // Add answer box
-            const answerBoxY = currentY + questionHeight + 8;
+            const answerBoxY = currentY + questionHeight + 6;
             doc.setDrawColor(100, 100, 100);
-            doc.setLineWidth(0.5);
+            doc.setLineWidth(0.4);
 
             // Answer label
-            doc.setFontSize(9);
+            doc.setFontSize(8.5);
             doc.setTextColor(100, 100, 100);
             doc.text("Answer:", questionLeftMargin, answerBoxY);
 
-            // Answer lines (respect right margin)
-            const lineRightEdge = Math.min(pageMargins.right - 10, 180);
-            doc.line(62, answerBoxY, lineRightEdge, answerBoxY);
-            doc.line(questionLeftMargin, answerBoxY + 8, lineRightEdge, answerBoxY + 8);
-            doc.line(questionLeftMargin, answerBoxY + 16, Math.min(lineRightEdge - 30, 120), answerBoxY + 16);
+            // Answer lines (optimized spacing and length)
+            const lineRightEdge = pageMargins.right - 8;
+            doc.line(58, answerBoxY, lineRightEdge, answerBoxY);
+            doc.line(questionLeftMargin, answerBoxY + 7, lineRightEdge, answerBoxY + 7);
+            doc.line(questionLeftMargin, answerBoxY + 14, Math.min(lineRightEdge - 40, 130), answerBoxY + 14);
 
             // Reset colors
             doc.setTextColor(0, 0, 0);
@@ -430,25 +543,31 @@ export class PDFGenerator {
     addAnswerKey(doc, answers) {
         doc.addPage();
 
-        // Page margins
+        // Page margins (optimized for answer key)
         const pageMargins = {
-            left: 20,
-            right: 190,
-            top: 30,
-            bottom: 275
+            left: 15,
+            right: 195,
+            top: 35,
+            bottom: 278
         };
 
-        doc.setFontSize(20);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
         doc.setTextColor(0, 0, 0);
-        doc.text("Answer Key", 105, 20, null, null, 'center');
+        doc.text("Answer Key", 105, 22, null, null, 'center');
 
-        doc.setFontSize(10);
+        // Decorative line
+        doc.setLineWidth(0.5);
+        doc.line(40, 26, 170, 26);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
         doc.setTextColor(0, 0, 0);
 
         const columns = 3;
-        const columnWidth = 60;
-        const lineHeight = 8;
-        const startY = 40;
+        const columnWidth = 62;
+        const lineHeight = 7;
+        const startY = 38;
         const maxAnswersPerPage = Math.floor((pageMargins.bottom - startY) / lineHeight) * columns;
 
         let answersOnCurrentPage = 0;
@@ -457,10 +576,14 @@ export class PDFGenerator {
             // Check if we need a new page
             if (answersOnCurrentPage >= maxAnswersPerPage) {
                 doc.addPage();
-                doc.setFontSize(20);
+                doc.setFontSize(18);
+                doc.setFont('helvetica', 'bold');
                 doc.setTextColor(0, 0, 0);
-                doc.text("Answer Key (continued)", 105, 20, null, null, 'center');
-                doc.setFontSize(10);
+                doc.text("Answer Key (continued)", 105, 22, null, null, 'center');
+                doc.setLineWidth(0.5);
+                doc.line(40, 26, 170, 26);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9.5);
                 doc.setTextColor(0, 0, 0);
                 answersOnCurrentPage = 0;
             }
@@ -470,9 +593,31 @@ export class PDFGenerator {
             const x = pageMargins.left + col * columnWidth;
             const y = startY + row * lineHeight;
 
-            // Sanitize answer text for PDF compatibility
-            const sanitizedAnswer = this.sanitizeText(String(answers[idx]));
-            doc.text(`${idx + 1}) ${sanitizedAnswer}`, x, y);
+            // Sanitize and truncate long answers
+            let sanitizedAnswer = this.sanitizeText(String(answers[idx]));
+
+            // Dynamic font size for very long answers
+            let answerFontSize = 9.5;
+            if (sanitizedAnswer.length > 25) {
+                answerFontSize = 8.5;
+            }
+
+            // Set font BEFORE measuring width
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(answerFontSize);
+
+            // Truncate extremely long answers to prevent overflow
+            const maxAnswerLength = 35;
+            if (sanitizedAnswer.length > maxAnswerLength) {
+                sanitizedAnswer = sanitizedAnswer.substring(0, maxAnswerLength - 3) + '...';
+            }
+
+            const answerText = `${idx + 1}) ${sanitizedAnswer}`;
+
+            // Use custom text wrapping to ensure it fits within column
+            const splitAnswer = this.wrapText(doc, answerText, columnWidth - 2);
+            doc.text(splitAnswer[0], x, y); // Only show first line to prevent overflow
+
             answersOnCurrentPage++;
         }
     }
