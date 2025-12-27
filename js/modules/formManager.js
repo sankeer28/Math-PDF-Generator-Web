@@ -30,6 +30,7 @@ export class FormManager {
         // Dynamic form updates
         document.getElementById('gradeLevel').addEventListener('change', () => {
             this.updateSubjectOptions();
+            this.updateWorksheetTitle();
         });
 
         document.getElementById('subject').addEventListener('change', () => {
@@ -37,6 +38,7 @@ export class FormManager {
             this.updateOperationTypesForSubject();
             this.updateProblemTypeForSubject();
             this.toggleOperationsVisibility();
+            this.updateWorksheetTitle();
         });
 
         // Difficulty slider update
@@ -60,6 +62,9 @@ export class FormManager {
 
         // Initialize accordion toggles
         this.initializeAccordions();
+
+        // Set initial worksheet title
+        this.updateWorksheetTitle();
     }
 
     initializeAccordions() {
@@ -79,6 +84,32 @@ export class FormManager {
                 }
             });
         });
+    }
+
+    updateWorksheetTitle() {
+        const gradeLevel = document.getElementById('gradeLevel').value;
+        const subject = document.getElementById('subject').value;
+        const titleInput = document.getElementById('pdfTitle');
+
+        // Get grade name
+        const gradeName = GRADE_CONFIGS[gradeLevel]?.name || 'Math';
+
+        // Get subject name
+        const subjectNames = {
+            arithmetic: 'Arithmetic',
+            measurement: 'Measurement',
+            algebra: 'Algebra',
+            geometry: 'Geometry',
+            statistics: 'Statistics',
+            trigonometry: 'Trigonometry',
+            precalculus: 'Pre-Calculus',
+            calculus: 'Calculus'
+        };
+        const subjectName = subjectNames[subject] || 'Math';
+
+        // Generate title
+        const newTitle = `${gradeName} ${subjectName} Practice`;
+        titleInput.value = newTitle;
     }
 
     toggleOperationsVisibility() {
