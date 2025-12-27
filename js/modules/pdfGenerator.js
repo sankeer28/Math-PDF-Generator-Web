@@ -39,8 +39,13 @@ export class PDFGenerator {
 
     // Custom text wrapping that's more reliable than splitTextToSize
     wrapText(doc, text, maxWidth) {
-        // Use very conservative width (80%) to prevent any stretching/justification
-        const safeMaxWidth = maxWidth * 0.80;
+        // Use EXTREMELY conservative width (65%) to prevent jsPDF 1.5.3 justification bug
+        // This old version of jsPDF has a bug where it justifies text randomly
+        const safeMaxWidth = maxWidth * 0.65;
+
+        // Additionally, if line is within 15% of safeMaxWidth, break it early
+        // This prevents jsPDF from stretching text that's "close enough" to the edge
+        const earlyBreakThreshold = safeMaxWidth * 0.85;
 
         const words = text.split(' ');
         const lines = [];
@@ -63,7 +68,7 @@ export class PDFGenerator {
                     let chunk = '';
                     for (let j = 0; j < remainingWord.length; j++) {
                         const testChunk = chunk + remainingWord[j];
-                        if (doc.getTextWidth(testChunk) > safeMaxWidth && chunk) {
+                        if (doc.getTextWidth(testChunk) > safeMaxWidth * 0.9 && chunk) {
                             break;
                         }
                         chunk = testChunk;
@@ -83,7 +88,11 @@ export class PDFGenerator {
             const testLine = currentLine ? currentLine + ' ' + word : word;
             const testWidth = doc.getTextWidth(testLine);
 
-            if (testWidth > safeMaxWidth && currentLine) {
+            // Break early if we're getting close to the threshold to avoid justification
+            if (testWidth > earlyBreakThreshold && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else if (testWidth > safeMaxWidth && currentLine) {
                 // Line would be too long, start a new line
                 lines.push(currentLine);
                 currentLine = word;
@@ -95,6 +104,13 @@ export class PDFGenerator {
         // Add the last line
         if (currentLine) {
             lines.push(currentLine);
+        }
+
+        // Add trailing space to each line except the last to prevent justification bug in jsPDF 1.5.3
+        for (let i = 0; i < lines.length - 1; i++) {
+            if (!lines[i].endsWith(' ')) {
+                lines[i] = lines[i] + ' ';
+            }
         }
 
         return lines.length > 0 ? lines : [text];
@@ -319,11 +335,11 @@ export class PDFGenerator {
 
         // Two-column layout with clear separation
         const leftColumnX = 20;
-        const rightColumnX = 110;
-        const columnGap = 12; // Gap between columns
+        const rightColumnX = 112;
+        const columnGap = 15; // Large gap between columns
         const pageWidth = pageMargins.right - pageMargins.left;
         const columnWidth = (pageWidth - columnGap) / 2; // Each column gets equal width
-        const maxQuestionWidth = columnWidth - 18; // Leave extra space to prevent justification
+        const maxQuestionWidth = columnWidth - 20; // Large margin to prevent justification
 
         const lineHeight = 5; // Line spacing for wrapped text
 
@@ -394,7 +410,9 @@ export class PDFGenerator {
             for (let lineIdx = 0; lineIdx < splitQuestion.length; lineIdx++) {
                 const lineY = currentY + (lineIdx * lineHeight) + 1;
                 // Simple x, y positioning - NO options object to avoid justification bug
-                doc.text(splitQuestion[lineIdx], columnX + 5, lineY);
+                // Add extra space after each character to prevent justification
+                const line = splitQuestion[lineIdx];
+                doc.text(line, columnX + 5, lineY);
             }
 
             // Add answer line on the last line of the question
@@ -441,7 +459,7 @@ export class PDFGenerator {
         // Adjust starting position based on whether title is shown
         const startY = shouldShowTitle ? 58 : 38;
         const questionLeftMargin = 36;
-        const maxQuestionWidth = pageMargins.right - questionLeftMargin - 15; // Extra margin to prevent justification
+        const maxQuestionWidth = pageMargins.right - questionLeftMargin - 20; // Large margin to prevent justification
         const lineHeight = 4.5;
 
         // Calculate spacing to fit problems with answer boxes
