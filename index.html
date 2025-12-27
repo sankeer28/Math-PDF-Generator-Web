@@ -167,41 +167,46 @@
                     </div>
 
                     <!-- Title & Header -->
-                    <div class="form-subsection">
-                        <h4 class="form-subsection-title">Title & Header</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="pdfTitle" class="form-label form-label-required">Worksheet Title</label>
-                                <input type="text" id="pdfTitle" class="form-input" value="" placeholder="Auto-generated based on grade and subject" required>
+                    <div class="form-subsection form-accordion">
+                        <button type="button" class="form-accordion-toggle" aria-expanded="false">
+                            <h4 class="form-subsection-title">Title & Header <span class="optional-tag">(Optional)</span></h4>
+                            <i class="fas fa-chevron-down accordion-icon"></i>
+                        </button>
+                        <div class="form-accordion-content">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="pdfTitle" class="form-label form-label-required">Worksheet Title</label>
+                                    <input type="text" id="pdfTitle" class="form-input" value="" placeholder="Auto-generated based on grade and subject" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="showTitle" class="form-label">Show Title on PDF</label>
+                                    <select id="showTitle" class="form-select">
+                                        <option value="all">All Pages</option>
+                                        <option value="first" selected>First Page Only</option>
+                                        <option value="no">No</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group">
-                                <label for="showTitle" class="form-label">Show Title on PDF</label>
-                                <select id="showTitle" class="form-select">
-                                    <option value="all">All Pages</option>
-                                    <option value="first" selected>First Page Only</option>
-                                    <option value="no">No</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Header Fields</label>
-                            <div class="checkbox-grid-4">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="showName" class="checkbox-input">
-                                    <span class="checkbox-text">Name</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="showDate" class="checkbox-input">
-                                    <span class="checkbox-text">Date</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="showScore" class="checkbox-input">
-                                    <span class="checkbox-text">Score</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="showGrade" class="checkbox-input">
-                                    <span class="checkbox-text">Grade</span>
-                                </label>
+                                <label class="form-label">Header Fields</label>
+                                <div class="checkbox-grid-4">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="showName" class="checkbox-input">
+                                        <span class="checkbox-text">Name</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="showDate" class="checkbox-input">
+                                        <span class="checkbox-text">Date</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="showScore" class="checkbox-input">
+                                        <span class="checkbox-text">Score</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="showGrade" class="checkbox-input">
+                                        <span class="checkbox-text">Grade</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
