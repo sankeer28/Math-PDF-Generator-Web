@@ -10,8 +10,7 @@
  * - Expansion of contextual data
  */
 
-// Grade Level Configurations - Individual Grades K-12
-import { kindergarten } from './gradeLevels/kindergarten.js';
+// Grade Level Configurations - Individual Grades 1-12
 import { grade1 } from './gradeLevels/grade1.js';
 import { grade2 } from './gradeLevels/grade2.js';
 import { grade3 } from './gradeLevels/grade3.js';
@@ -41,10 +40,9 @@ import { names, professions, places, items, actions, timeframes, measurements, e
 
 /**
  * Grade configurations indexed by ID
- * Individual grades K-12
+ * Individual grades 1-12
  */
 export const GRADE_CONFIGS = {
-    kindergarten,
     grade1,
     grade2,
     grade3,
