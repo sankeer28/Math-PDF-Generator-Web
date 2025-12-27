@@ -168,7 +168,8 @@
                         <div class="form-group">
                             <label for="showTitle" class="form-label">Show Title on PDF</label>
                             <select id="showTitle" class="form-select">
-                                <option value="yes">Yes</option>
+                                <option value="all">All Pages</option>
+                                <option value="first" selected>First Page Only</option>
                                 <option value="no">No</option>
                             </select>
                         </div>
@@ -201,6 +202,31 @@
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="showNumberCircles" class="checkbox-input">
                                     <span class="checkbox-text">Show Circles Around Question Numbers</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="pageNumberPosition" class="form-label">Page Number Position</label>
+                            <select id="pageNumberPosition" class="form-select">
+                                <option value="bottom-center">Bottom Center</option>
+                                <option value="bottom-left">Bottom Left</option>
+                                <option value="bottom-right">Bottom Right</option>
+                                <option value="top-right">Top Right</option>
+                                <option value="none">None (Hide)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Page Styling</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="showPageBorder" class="checkbox-input">
+                                    <span class="checkbox-text">Show Border Around Page</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="showPageNumberBox" class="checkbox-input">
+                                    <span class="checkbox-text">Show Box Around Page Number</span>
                                 </label>
                             </div>
                         </div>

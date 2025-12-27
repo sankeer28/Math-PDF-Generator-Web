@@ -80,11 +80,11 @@ export class PDFGenerator {
                 }
 
                 if (pageType === "equations") {
-                    const pageAnswers = this.addEquationsPage(doc, operations, 20, formData);
+                    const pageAnswers = this.addEquationsPage(doc, operations, 20, formData, p + 1);
                     answers.push(...pageAnswers);
                     totalQuestions += pageAnswers.length;
                 } else {
-                    const pageAnswers = this.addWordProblemsPage(doc, operations, 4, formData);
+                    const pageAnswers = this.addWordProblemsPage(doc, operations, 4, formData, p + 1);
                     answers.push(...pageAnswers);
                     totalQuestions += pageAnswers.length;
                 }
@@ -108,19 +108,24 @@ export class PDFGenerator {
     }
 
     addHeader(doc, formData, pageNum, totalPages) {
-        const { pdfTitle, showTitle, showName, showDate, showScore, showGrade } = formData;
+        const { pdfTitle, showTitle, showName, showDate, showScore, showGrade, pageNumberPosition, showPageNumberBox, showPageBorder } = formData;
 
-        // Add border around the page
-        doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(0.5);
-        doc.rect(10, 10, 190, 277);
+        // Add border around the page (optional)
+        if (showPageBorder) {
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.5);
+            doc.rect(10, 10, 190, 277);
+        }
 
         let currentY = 25;
 
         // Title with decorative line (if enabled)
-        if (showTitle) {
+        // showTitle can be: 'all', 'first', or 'no'
+        const shouldShowTitle = showTitle === 'all' || (showTitle === 'first' && pageNum === 1);
+
+        if (shouldShowTitle) {
             doc.setFontSize(24);
-            doc.setTextColor(0, 102, 204);
+            doc.setTextColor(0, 0, 0);
             doc.setFont('helvetica', 'bold');
             const sanitizedTitle = this.sanitizeText(pdfTitle);
             doc.text(sanitizedTitle, 105, currentY, null, null, 'center');
@@ -128,9 +133,9 @@ export class PDFGenerator {
             // Decorative line under title
             currentY += 5;
             doc.setLineWidth(1);
-            doc.setDrawColor(0, 102, 204);
+            doc.setDrawColor(0, 0, 0);
             doc.line(30, currentY, 180, currentY);
-            currentY += 15;
+            currentY += 8;
         } else {
             currentY = 35; // Start lower if no title
         }
@@ -168,18 +173,65 @@ export class PDFGenerator {
             }
         }
 
-        // Page number with decorative border
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.rect(95, 275, 20, 8);
-        doc.text(`${pageNum}/${totalPages}`, 105, 281, null, null, 'center');
+        // Page number (customizable position and styling)
+        if (pageNumberPosition !== 'none') {
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+
+            let pageX, pageY, align;
+
+            // Determine position based on setting
+            switch (pageNumberPosition) {
+                case 'bottom-center':
+                    pageX = 105;
+                    pageY = 281;
+                    align = 'center';
+                    if (showPageNumberBox) {
+                        doc.rect(95, 275, 20, 8);
+                    }
+                    break;
+                case 'bottom-left':
+                    pageX = 20;
+                    pageY = 281;
+                    align = 'left';
+                    if (showPageNumberBox) {
+                        doc.rect(15, 275, 20, 8);
+                    }
+                    break;
+                case 'bottom-right':
+                    pageX = 190;
+                    pageY = 281;
+                    align = 'right';
+                    if (showPageNumberBox) {
+                        doc.rect(175, 275, 20, 8);
+                    }
+                    break;
+                case 'top-right':
+                    pageX = 190;
+                    pageY = 18;
+                    align = 'right';
+                    if (showPageNumberBox) {
+                        doc.rect(175, 12, 20, 8);
+                    }
+                    break;
+                default:
+                    pageX = 105;
+                    pageY = 281;
+                    align = 'center';
+                    if (showPageNumberBox) {
+                        doc.rect(95, 275, 20, 8);
+                    }
+            }
+
+            doc.text(`${pageNum}/${totalPages}`, pageX, pageY, null, null, align);
+        }
 
         // Reset font
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
     }
 
-    addEquationsPage(doc, operations, numProblems, formData) {
+    addEquationsPage(doc, operations, numProblems, formData, pageNum = 1) {
         const answers = [];
         doc.setFontSize(13);
         doc.setTextColor(0, 0, 0);
@@ -192,7 +244,12 @@ export class PDFGenerator {
             bottom: 280
         };
 
-        const startY = 70; // Start after header
+        // Determine if title is shown on this page
+        const { showTitle } = formData;
+        const shouldShowTitle = showTitle === 'all' || (showTitle === 'first' && pageNum === 1);
+
+        // Adjust starting position based on whether title is shown
+        const startY = shouldShowTitle ? 55 : 35; // Start higher if no title
         const leftColumn = 25;
         const rightColumn = 115;
         const columnWidth = 85; // Max width for each column
@@ -269,7 +326,7 @@ export class PDFGenerator {
         return answers;
     }
 
-    addWordProblemsPage(doc, operations, numProblems, formData) {
+    addWordProblemsPage(doc, operations, numProblems, formData, pageNum = 1) {
         const answers = [];
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
@@ -282,7 +339,12 @@ export class PDFGenerator {
             bottom: 280
         };
 
-        const startY = 70;
+        // Determine if title is shown on this page
+        const { showTitle } = formData;
+        const shouldShowTitle = showTitle === 'all' || (showTitle === 'first' && pageNum === 1);
+
+        // Adjust starting position based on whether title is shown
+        const startY = shouldShowTitle ? 55 : 35; // Start higher if no title
         const questionLeftMargin = 40;
         const maxQuestionWidth = pageMargins.right - questionLeftMargin - 10;
 
@@ -377,7 +439,7 @@ export class PDFGenerator {
         };
 
         doc.setFontSize(20);
-        doc.setTextColor(0, 102, 204);
+        doc.setTextColor(0, 0, 0);
         doc.text("Answer Key", 105, 20, null, null, 'center');
 
         doc.setFontSize(10);
@@ -396,7 +458,7 @@ export class PDFGenerator {
             if (answersOnCurrentPage >= maxAnswersPerPage) {
                 doc.addPage();
                 doc.setFontSize(20);
-                doc.setTextColor(0, 102, 204);
+                doc.setTextColor(0, 0, 0);
                 doc.text("Answer Key (continued)", 105, 20, null, null, 'center');
                 doc.setFontSize(10);
                 doc.setTextColor(0, 0, 0);
@@ -575,10 +637,10 @@ export class PDFGenerator {
 
                 // Generate problems based on type
                 if (pageType === "equations") {
-                    const pageAnswers = this.addEquationsPage(doc, operations, 20, formData);
+                    const pageAnswers = this.addEquationsPage(doc, operations, 20, formData, p + 1);
                     answers.push(...pageAnswers);
                 } else {
-                    const pageAnswers = this.addWordProblemsPage(doc, operations, 4, formData);
+                    const pageAnswers = this.addWordProblemsPage(doc, operations, 4, formData, p + 1);
                     answers.push(...pageAnswers);
                 }
             }

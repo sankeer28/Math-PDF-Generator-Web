@@ -283,12 +283,15 @@ export class FormManager {
             numPDFs: parseInt(document.getElementById('numPDFs').value),
             numPages: parseInt(document.getElementById('numPages').value),
             pdfTitle: document.getElementById('pdfTitle').value.trim(),
-            showTitle: document.getElementById('showTitle').value === 'yes',
+            showTitle: document.getElementById('showTitle').value,
             showName: document.getElementById('showName').checked,
             showDate: document.getElementById('showDate').checked,
             showScore: document.getElementById('showScore').checked,
             showGrade: document.getElementById('showGrade').checked,
             showNumberCircles: document.getElementById('showNumberCircles').checked,
+            pageNumberPosition: document.getElementById('pageNumberPosition').value,
+            showPageNumberBox: document.getElementById('showPageNumberBox').checked,
+            showPageBorder: document.getElementById('showPageBorder').checked,
             answerKey: document.getElementById('answerKey').value
         };
     }
