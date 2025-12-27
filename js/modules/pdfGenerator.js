@@ -14,6 +14,26 @@ export class PDFGenerator {
         this.progressManager = new ProgressManager();
     }
 
+    // Sanitize text to replace special Unicode characters with ASCII equivalents for PDF compatibility
+    sanitizeText(text) {
+        if (!text) return text;
+        return text
+            .replace(/π/g, 'pi')
+            .replace(/≈/g, ' approx ')
+            .replace(/°/g, ' deg')
+            .replace(/×/g, ' x ')
+            .replace(/÷/g, ' / ')
+            .replace(/≤/g, '<=')
+            .replace(/≥/g, '>=')
+            .replace(/±/g, '+/-')
+            .replace(/–/g, '-')  // en-dash
+            .replace(/—/g, '-')  // em-dash
+            .replace(/"/g, '"')  // smart quotes
+            .replace(/"/g, '"')
+            .replace(/'/g, "'")
+            .replace(/'/g, "'");
+    }
+
     async generatePDFs(formData) {
         this.progressManager.show();
 
@@ -102,7 +122,8 @@ export class PDFGenerator {
             doc.setFontSize(24);
             doc.setTextColor(0, 102, 204);
             doc.setFont('helvetica', 'bold');
-            doc.text(pdfTitle, 105, currentY, null, null, 'center');
+            const sanitizedTitle = this.sanitizeText(pdfTitle);
+            doc.text(sanitizedTitle, 105, currentY, null, null, 'center');
 
             // Decorative line under title
             currentY += 5;
@@ -163,35 +184,86 @@ export class PDFGenerator {
         doc.setFontSize(13);
         doc.setTextColor(0, 0, 0);
 
+        // Page margins (matching the border rect at 10, 10, 190, 277)
+        const pageMargins = {
+            left: 15,
+            right: 195,
+            top: 10,
+            bottom: 280
+        };
+
         const startY = 70; // Start after header
-        const spacing = 16; // Better spacing between problems
         const leftColumn = 25;
         const rightColumn = 115;
+        const columnWidth = 85; // Max width for each column
+        const maxQuestionWidth = columnWidth - 20; // Leave space for answer line
+        const lineHeight = 5; // Height per line of text
+
+        // Calculate spacing to fit all problems (accounting for potential multi-line questions)
+        const rowsNeeded = Math.ceil(numProblems / 2);
+        const availableHeight = pageMargins.bottom - startY - 5; // 5mm buffer
+        const baseSpacing = Math.max(18, availableHeight / rowsNeeded); // Minimum 18mm for multi-line support
+
+        let currentLeftY = startY;
+        let currentRightY = startY;
+        let problemsAdded = 0;
 
         for (let j = 0; j < numProblems; j++) {
             const randomOperation = operations[Math.floor(Math.random() * operations.length)];
             const { question, answer } = this.problemGenerator.generateUniqueProblem(randomOperation, 'equations', formData.topics);
-            answers.push(answer);
 
-            const x = (j % 2 === 0) ? leftColumn : rightColumn;
-            const y = startY + Math.floor(j / 2) * spacing;
+            // Sanitize question text for PDF compatibility
+            const sanitizedQuestion = this.sanitizeText(question);
+
+            const isLeftColumn = (j % 2 === 0);
+            const x = isLeftColumn ? leftColumn : rightColumn;
+            const currentY = isLeftColumn ? currentLeftY : currentRightY;
+
+            // Calculate question width and split if necessary
+            doc.setFontSize(13);
+            const splitQuestion = doc.splitTextToSize(sanitizedQuestion, maxQuestionWidth);
+            const questionHeight = splitQuestion.length * lineHeight;
+
+            // Check if this problem will fit on the page
+            if (currentY + questionHeight > pageMargins.bottom - 10) {
+                console.warn(`Equation ${j + 1} would overflow page, skipping`);
+                continue;
+            }
+
+            answers.push(answer);
+            problemsAdded++;
 
             // Add problem number (with optional circle)
             doc.setFontSize(11);
             if (formData.showNumberCircles) {
-                doc.circle(x - 3, y, 3); // Moved circle down from y-2 to y for better centering
-                doc.text(`${j + 1}`, x - 3, y + 1, null, null, 'center');
+                doc.circle(x - 3, currentY, 3);
+                doc.text(`${problemsAdded}`, x - 3, currentY + 1, null, null, 'center');
             } else {
-                doc.text(`${j + 1}.`, x - 3, y + 1);
+                doc.text(`${problemsAdded}.`, x - 3, currentY + 1);
             }
 
-            // Add equation with better spacing
+            // Add equation with proper wrapping
             doc.setFontSize(13);
-            doc.text(question, x + 8, y + 1);
+            doc.text(splitQuestion, x + 8, currentY + 1);
 
-            // Add answer line
+            // Add answer line after the last line of the question
+            const answerLineY = currentY + (splitQuestion.length - 1) * lineHeight + 1;
+            const lastLineWidth = doc.getTextWidth(splitQuestion[splitQuestion.length - 1]);
             doc.setLineWidth(0.3);
-            doc.line(x + 8 + doc.getTextWidth(question) + 3, y + 1, x + 75, y + 1);
+            const lineStart = x + 8 + lastLineWidth + 3;
+            const lineEnd = Math.min(x + columnWidth, pageMargins.right - 5);
+
+            // Only draw answer line if there's space for it
+            if (lineStart < lineEnd - 10) {
+                doc.line(lineStart, answerLineY, lineEnd, answerLineY);
+            }
+
+            // Update Y position for next problem in this column
+            if (isLeftColumn) {
+                currentLeftY += Math.max(baseSpacing, questionHeight + 5);
+            } else {
+                currentRightY += Math.max(baseSpacing, questionHeight + 5);
+            }
         }
 
         return answers;
@@ -202,15 +274,50 @@ export class PDFGenerator {
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
 
+        // Page margins (matching the border rect at 10, 10, 190, 277)
+        const pageMargins = {
+            left: 15,
+            right: 195,
+            top: 10,
+            bottom: 280
+        };
+
         const startY = 70;
-        const problemSpacing = 48;
+        const questionLeftMargin = 40;
+        const maxQuestionWidth = pageMargins.right - questionLeftMargin - 10;
+
+        // Calculate spacing to fit problems with answer boxes
+        const availableHeight = pageMargins.bottom - startY - 5;
+        const estimatedProblemHeight = 48; // Approximate height per problem including answer box
+        const maxProblemsToFit = Math.floor(availableHeight / estimatedProblemHeight);
+        const actualProblems = Math.min(numProblems, maxProblemsToFit);
+        const problemSpacing = availableHeight / actualProblems;
+
+        let currentY = startY;
+        let problemsAdded = 0;
 
         for (let j = 0; j < numProblems; j++) {
             const randomOperation = operations[Math.floor(Math.random() * operations.length)];
             const { question, answer } = this.problemGenerator.generateUniqueProblem(randomOperation, 'word', formData.topics);
-            answers.push(answer);
 
-            const y = startY + j * problemSpacing;
+            // Sanitize question text for PDF compatibility
+            const sanitizedQuestion = this.sanitizeText(question);
+
+            // Calculate question height
+            doc.setFontSize(11);
+            const splitQuestion = doc.splitTextToSize(sanitizedQuestion, maxQuestionWidth);
+            const questionHeight = splitQuestion.length * 5;
+            const answerBoxHeight = 20;
+            const totalHeight = questionHeight + answerBoxHeight + 10; // 10 for spacing
+
+            // Check if this problem will fit on the page
+            if (currentY + totalHeight > pageMargins.bottom) {
+                console.warn(`Word problem ${j + 1} would overflow page, skipping remaining problems`);
+                break;
+            }
+
+            answers.push(answer);
+            problemsAdded++;
 
             // Add problem number (with optional styling)
             doc.setFontSize(10);
@@ -218,38 +325,41 @@ export class PDFGenerator {
                 // Circle style
                 doc.setDrawColor(0, 0, 0);
                 doc.setLineWidth(0.5);
-                doc.circle(27.5, y - 4, 5);
+                doc.circle(27.5, currentY - 4, 5);
                 doc.setTextColor(0, 0, 0);
-                doc.text(`${j + 1}`, 27.5, y - 2, null, null, 'center');
+                doc.text(`${problemsAdded}`, 27.5, currentY - 2, null, null, 'center');
             } else {
                 // Simple number with period
                 doc.setTextColor(0, 0, 0);
-                doc.text(`${j + 1}.`, 20, y - 2);
+                doc.text(`${problemsAdded}.`, 20, currentY - 2);
             }
 
-            // Add question with better formatting
+            // Add question with proper wrapping
             doc.setFontSize(11);
-            const splitQuestion = doc.splitTextToSize(question, 165);
-            doc.text(splitQuestion, 40, y);
+            doc.text(splitQuestion, questionLeftMargin, currentY);
 
             // Add answer box
-            const answerBoxY = y + splitQuestion.length * 4.5 + 8;
+            const answerBoxY = currentY + questionHeight + 8;
             doc.setDrawColor(100, 100, 100);
             doc.setLineWidth(0.5);
 
             // Answer label
             doc.setFontSize(9);
             doc.setTextColor(100, 100, 100);
-            doc.text("Answer:", 40, answerBoxY);
+            doc.text("Answer:", questionLeftMargin, answerBoxY);
 
-            // Answer lines
-            doc.line(62, answerBoxY, 180, answerBoxY);
-            doc.line(40, answerBoxY + 8, 180, answerBoxY + 8);
-            doc.line(40, answerBoxY + 16, 120, answerBoxY + 16);
+            // Answer lines (respect right margin)
+            const lineRightEdge = Math.min(pageMargins.right - 10, 180);
+            doc.line(62, answerBoxY, lineRightEdge, answerBoxY);
+            doc.line(questionLeftMargin, answerBoxY + 8, lineRightEdge, answerBoxY + 8);
+            doc.line(questionLeftMargin, answerBoxY + 16, Math.min(lineRightEdge - 30, 120), answerBoxY + 16);
 
             // Reset colors
             doc.setTextColor(0, 0, 0);
             doc.setDrawColor(0, 0, 0);
+
+            // Move to next problem position
+            currentY += problemSpacing;
         }
 
         return answers;
@@ -257,6 +367,15 @@ export class PDFGenerator {
 
     addAnswerKey(doc, answers) {
         doc.addPage();
+
+        // Page margins
+        const pageMargins = {
+            left: 20,
+            right: 190,
+            top: 30,
+            bottom: 275
+        };
+
         doc.setFontSize(20);
         doc.setTextColor(0, 102, 204);
         doc.text("Answer Key", 105, 20, null, null, 'center');
@@ -264,10 +383,35 @@ export class PDFGenerator {
         doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
 
+        const columns = 3;
+        const columnWidth = 60;
+        const lineHeight = 8;
+        const startY = 40;
+        const maxAnswersPerPage = Math.floor((pageMargins.bottom - startY) / lineHeight) * columns;
+
+        let answersOnCurrentPage = 0;
+
         for (let idx = 0; idx < answers.length; idx++) {
-            const x = 20 + (idx % 3) * 60;
-            const y = 40 + Math.floor(idx / 3) * 8;
-            doc.text(`${idx + 1}) ${answers[idx]}`, x, y);
+            // Check if we need a new page
+            if (answersOnCurrentPage >= maxAnswersPerPage) {
+                doc.addPage();
+                doc.setFontSize(20);
+                doc.setTextColor(0, 102, 204);
+                doc.text("Answer Key (continued)", 105, 20, null, null, 'center');
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                answersOnCurrentPage = 0;
+            }
+
+            const col = answersOnCurrentPage % columns;
+            const row = Math.floor(answersOnCurrentPage / columns);
+            const x = pageMargins.left + col * columnWidth;
+            const y = startY + row * lineHeight;
+
+            // Sanitize answer text for PDF compatibility
+            const sanitizedAnswer = this.sanitizeText(String(answers[idx]));
+            doc.text(`${idx + 1}) ${sanitizedAnswer}`, x, y);
+            answersOnCurrentPage++;
         }
     }
 
