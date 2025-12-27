@@ -164,11 +164,11 @@ export class PDFGenerator {
                 }
 
                 if (pageType === "equations") {
-                    const pageAnswers = this.addEquationsPage(doc, operations, 20, formData, p + 1);
+                    const pageAnswers = this.addEquationsPage(doc, operations, 20, formData, p + 1, totalQuestions);
                     answers.push(...pageAnswers);
                     totalQuestions += pageAnswers.length;
                 } else {
-                    const pageAnswers = this.addWordProblemsPage(doc, operations, 4, formData, p + 1);
+                    const pageAnswers = this.addWordProblemsPage(doc, operations, 4, formData, p + 1, totalQuestions);
                     answers.push(...pageAnswers);
                     totalQuestions += pageAnswers.length;
                 }
@@ -315,7 +315,7 @@ export class PDFGenerator {
         doc.setTextColor(0, 0, 0);
     }
 
-    addEquationsPage(doc, operations, numProblems, formData, pageNum = 1) {
+    addEquationsPage(doc, operations, numProblems, formData, pageNum = 1, startingQuestionNum = 0) {
         const answers = [];
 
         // Page margins (optimized for 2-column layout)
@@ -350,7 +350,7 @@ export class PDFGenerator {
 
         let currentLeftY = startY;
         let currentRightY = startY;
-        let problemsAdded = 0;
+        let problemsAdded = startingQuestionNum; // Start from the passed-in number
 
         for (let j = 0; j < numProblems; j++) {
             const randomOperation = operations[Math.floor(Math.random() * operations.length)];
@@ -441,7 +441,7 @@ export class PDFGenerator {
         return answers;
     }
 
-    addWordProblemsPage(doc, operations, numProblems, formData, pageNum = 1) {
+    addWordProblemsPage(doc, operations, numProblems, formData, pageNum = 1, startingQuestionNum = 0) {
         const answers = [];
 
         // Page margins (optimized for maximum content)
@@ -470,7 +470,7 @@ export class PDFGenerator {
         const problemSpacing = availableHeight / actualProblems;
 
         let currentY = startY;
-        let problemsAdded = 0;
+        let problemsAdded = startingQuestionNum; // Start from the passed-in number
 
         for (let j = 0; j < numProblems; j++) {
             const randomOperation = operations[Math.floor(Math.random() * operations.length)];
@@ -782,6 +782,7 @@ export class PDFGenerator {
             // Create a new PDF document
             const doc = new jsPDF();
             const answers = [];
+            let totalQuestions = 0;
 
             // Generate the exact number of pages specified in settings
             for (let p = 0; p < numPages; p++) {
@@ -800,11 +801,13 @@ export class PDFGenerator {
 
                 // Generate problems based on type
                 if (pageType === "equations") {
-                    const pageAnswers = this.addEquationsPage(doc, operations, 20, formData, p + 1);
+                    const pageAnswers = this.addEquationsPage(doc, operations, 20, formData, p + 1, totalQuestions);
                     answers.push(...pageAnswers);
+                    totalQuestions += pageAnswers.length;
                 } else {
-                    const pageAnswers = this.addWordProblemsPage(doc, operations, 4, formData, p + 1);
+                    const pageAnswers = this.addWordProblemsPage(doc, operations, 4, formData, p + 1, totalQuestions);
                     answers.push(...pageAnswers);
+                    totalQuestions += pageAnswers.length;
                 }
             }
 
