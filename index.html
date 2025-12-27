@@ -148,86 +148,99 @@
                         <i class="fas fa-file-pdf"></i>
                         Output Settings
                     </h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="numPDFs" class="form-label">Number of PDFs</label>
-                            <input type="number" id="numPDFs" class="form-input" value="5" min="1" max="100">
-                            <small class="form-help">Generate multiple unique worksheets (1-100)</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="numPages" class="form-label">Pages per PDF</label>
-                            <input type="number" id="numPages" class="form-input" value="4" min="1" max="50">
-                            <small class="form-help">Pages in each worksheet (1-50)</small>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="pdfTitle" class="form-label form-label-required">Worksheet Title</label>
-                            <input type="text" id="pdfTitle" class="form-input" value="Math Practice Worksheet" placeholder="Enter worksheet title" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="showTitle" class="form-label">Show Title on PDF</label>
-                            <select id="showTitle" class="form-select">
-                                <option value="all">All Pages</option>
-                                <option value="first" selected>First Page Only</option>
-                                <option value="no">No</option>
-                            </select>
+
+                    <!-- PDF Generation -->
+                    <div class="form-subsection">
+                        <h4 class="form-subsection-title">PDF Generation</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="numPDFs" class="form-label">Number of PDFs</label>
+                                <input type="number" id="numPDFs" class="form-input" value="5" min="1" max="100">
+                                <small class="form-help">Generate multiple unique worksheets (1-100)</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="numPages" class="form-label">Pages per PDF</label>
+                                <input type="number" id="numPages" class="form-input" value="4" min="1" max="50">
+                                <small class="form-help">Pages in each worksheet (1-50)</small>
+                            </div>
                         </div>
                     </div>
-                    <div class="form-row">
+
+                    <!-- Title & Header -->
+                    <div class="form-subsection">
+                        <h4 class="form-subsection-title">Title & Header</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="pdfTitle" class="form-label form-label-required">Worksheet Title</label>
+                                <input type="text" id="pdfTitle" class="form-input" value="Math Practice Worksheet" placeholder="Enter worksheet title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="showTitle" class="form-label">Show Title on PDF</label>
+                                <select id="showTitle" class="form-select">
+                                    <option value="all">All Pages</option>
+                                    <option value="first" selected>First Page Only</option>
+                                    <option value="no">No</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label class="form-label">Header Fields</label>
-                            <div class="checkbox-group">
+                            <div class="checkbox-grid-4">
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="showName" class="checkbox-input">
-                                    <span class="checkbox-text">Show Name Field</span>
+                                    <span class="checkbox-text">Name</span>
                                 </label>
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="showDate" class="checkbox-input">
-                                    <span class="checkbox-text">Show Date Field</span>
+                                    <span class="checkbox-text">Date</span>
                                 </label>
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="showScore" class="checkbox-input">
-                                    <span class="checkbox-text">Show Score Field</span>
+                                    <span class="checkbox-text">Score</span>
                                 </label>
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="showGrade" class="checkbox-input">
-                                    <span class="checkbox-text">Show Grade Field</span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Question Styling</label>
-                            <div class="checkbox-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="showNumberCircles" class="checkbox-input">
-                                    <span class="checkbox-text">Show Circles Around Question Numbers</span>
+                                    <span class="checkbox-text">Grade</span>
                                 </label>
                             </div>
                         </div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="pageNumberPosition" class="form-label">Page Number Position</label>
-                            <select id="pageNumberPosition" class="form-select">
-                                <option value="bottom-center">Bottom Center</option>
-                                <option value="bottom-left">Bottom Left</option>
-                                <option value="bottom-right">Bottom Right</option>
-                                <option value="top-right">Top Right</option>
-                                <option value="none">None (Hide)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Page Styling</label>
-                            <div class="checkbox-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="showPageBorder" class="checkbox-input">
-                                    <span class="checkbox-text">Show Border Around Page</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="showPageNumberBox" class="checkbox-input">
-                                    <span class="checkbox-text">Show Box Around Page Number</span>
-                                </label>
+
+                    <!-- Page Styling -->
+                    <div class="form-subsection form-accordion">
+                        <button type="button" class="form-accordion-toggle" aria-expanded="false">
+                            <h4 class="form-subsection-title">Page Styling <span class="optional-tag">(Optional)</span></h4>
+                            <i class="fas fa-chevron-down accordion-icon"></i>
+                        </button>
+                        <div class="form-accordion-content">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="pageNumberPosition" class="form-label">Page Number Position</label>
+                                    <select id="pageNumberPosition" class="form-select">
+                                        <option value="bottom-center">Bottom Center</option>
+                                        <option value="bottom-left">Bottom Left</option>
+                                        <option value="bottom-right">Bottom Right</option>
+                                        <option value="top-right">Top Right</option>
+                                        <option value="none">None (Hide)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Display Options</label>
+                                    <div class="checkbox-group">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="showPageBorder" class="checkbox-input">
+                                            <span class="checkbox-text">Page Border</span>
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="showPageNumberBox" class="checkbox-input">
+                                            <span class="checkbox-text">Page Number Box</span>
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="showNumberCircles" class="checkbox-input">
+                                            <span class="checkbox-text">Question Number Circles</span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

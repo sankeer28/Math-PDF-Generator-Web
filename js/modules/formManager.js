@@ -57,6 +57,28 @@ export class FormManager {
         this.updateSubjectOptions();
         this.updateTopicOptions();
         this.toggleOperationsVisibility();
+
+        // Initialize accordion toggles
+        this.initializeAccordions();
+    }
+
+    initializeAccordions() {
+        const accordionToggles = document.querySelectorAll('.form-accordion-toggle');
+
+        accordionToggles.forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                const content = toggle.nextElementSibling;
+
+                if (isExpanded) {
+                    toggle.setAttribute('aria-expanded', 'false');
+                    content.classList.remove('expanded');
+                } else {
+                    toggle.setAttribute('aria-expanded', 'true');
+                    content.classList.add('expanded');
+                }
+            });
+        });
     }
 
     toggleOperationsVisibility() {

@@ -117,6 +117,24 @@
     color: var(--text-primary);
 }
 
+.checkbox-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-sm);
+}
+
+@media (max-width: 768px) {
+    .checkbox-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .checkbox-grid-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Range Slider */
 .range-group {
     display: flex;

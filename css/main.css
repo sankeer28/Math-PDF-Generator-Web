@@ -49,6 +49,82 @@
     color: var(--accent-primary);
 }
 
+.form-subsection {
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.form-subsection-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.8125rem;
+}
+
+.optional-tag {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-tertiary);
+    text-transform: none;
+    letter-spacing: normal;
+    margin-left: var(--spacing-xs);
+}
+
+/* Accordion */
+.form-accordion {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 0;
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-accordion-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color var(--transition-fast);
+}
+
+.form-accordion-toggle:hover {
+    background-color: var(--bg-secondary);
+}
+
+.form-accordion-toggle .form-subsection-title {
+    margin: 0;
+}
+
+.accordion-icon {
+    color: var(--text-tertiary);
+    transition: transform var(--transition-fast);
+    font-size: 0.875rem;
+}
+
+.form-accordion-toggle[aria-expanded="true"] .accordion-icon {
+    transform: rotate(180deg);
+}
+
+.form-accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    padding: 0 var(--spacing-lg);
+}
+
+.form-accordion-content.expanded {
+    max-height: 1000px;
+    padding: 0 var(--spacing-lg) var(--spacing-lg) var(--spacing-lg);
+}
+
 .form-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
