@@ -12,7 +12,7 @@ export const grade11 = {
     description: 'MCR3U: Functions, exponential functions, trigonometric functions, sequences and series',
 
     // Available subjects
-    subjects: ['algebra', 'trigonometry', 'precalculus', 'statistics'],
+    subjects: ['algebra', 'geometry', 'trigonometry', 'precalculus', 'statistics'],
 
     // Number range
     maxNumber: 10000000,

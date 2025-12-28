@@ -19,7 +19,7 @@ export class ProblemGenerator {
         this.uniquenessThreshold = 0.85; // 85% similarity threshold - stricter to catch more duplicates
     }
 
-    setConfig(gradeLevel, difficulty, subject) {
+    setConfig(gradeLevel, difficulty, subjects) {
         // Validate inputs
         if (!GRADE_CONFIGS[gradeLevel]) {
             console.error(`Invalid grade level: ${gradeLevel}. Available:`, Object.keys(GRADE_CONFIGS));
@@ -32,13 +32,18 @@ export class ProblemGenerator {
             difficulty = 'medium';
         }
 
+        // Handle both single subject (string) and multiple subjects (array) for backward compatibility
+        if (typeof subjects === 'string') {
+            subjects = [subjects];
+        }
+
         // Get the numeric multiplier value from the difficulty config object
         const difficultyValue = DIFFICULTY_MULTIPLIERS[difficulty]?.value || 1.0;
 
         this.config = {
             grade: GRADE_CONFIGS[gradeLevel],
             difficulty: difficultyValue,
-            subject: subject,
+            subjects: subjects,  // Store array of subjects
             maxNumber: Math.floor(GRADE_CONFIGS[gradeLevel].maxNumber * difficultyValue)
         };
 
@@ -46,14 +51,26 @@ export class ProblemGenerator {
             gradeLevel,
             difficulty,
             difficultyValue,
-            subject,
+            subjects,
             maxNumber: this.config.maxNumber
         });
     }
 
+    getRandomSubject() {
+        // Randomly select one subject from the available subjects
+        if (!this.config || !this.config.subjects || this.config.subjects.length === 0) {
+            return 'arithmetic';  // Default fallback
+        }
+        const randomIndex = Math.floor(Math.random() * this.config.subjects.length);
+        return this.config.subjects[randomIndex];
+    }
+
     generateProblem(operation, problemType, selectedTopics = 'all') {
+        // Randomly select a subject from available subjects for this problem
+        const subject = this.getRandomSubject();
+
         // Smart conflict resolution: Topics take priority over Problem Type for arithmetic
-        if (this.config.subject === 'arithmetic' && selectedTopics !== 'all' && selectedTopics.length > 0) {
+        if (subject === 'arithmetic' && selectedTopics !== 'all' && selectedTopics.length > 0) {
             if (selectedTopics.includes('word-problems')) {
                 problemType = 'word';
             } else if (selectedTopics.includes('basic-operations')) {
@@ -69,17 +86,17 @@ export class ProblemGenerator {
             problemType = Math.random() < 0.5 ? 'equations' : 'word';
         }
 
-        operation = this.validateOperationForSubject(operation);
+        operation = this.validateOperationForSubject(operation, subject);
 
         if (problemType === 'equations') {
-            return this.generateEquation(operation, selectedTopics);
+            return this.generateEquation(operation, selectedTopics, subject);
         } else {
-            return this.generateWordProblem(operation);
+            return this.generateWordProblem(operation, subject);
         }
     }
 
-    validateOperationForSubject(operation) {
-        switch (this.config.subject) {
+    validateOperationForSubject(operation, subject) {
+        switch (subject) {
             case 'algebra':
                 if (['addition', 'subtraction', 'multiplication', 'division'].includes(operation)) {
                     return 'algebraic';
@@ -103,20 +120,25 @@ export class ProblemGenerator {
         }
     }
 
-    generateEquation(operation, selectedTopics = 'all') {
-        if (this.config.subject === 'algebra') {
+    generateEquation(operation, selectedTopics = 'all', subject = null) {
+        // Use provided subject or get random one
+        if (!subject) {
+            subject = this.getRandomSubject();
+        }
+
+        if (subject === 'algebra') {
             return this.generateAlgebraEquation(operation, selectedTopics);
-        } else if (this.config.subject === 'geometry') {
+        } else if (subject === 'geometry') {
             return this.generateGeometryProblem(selectedTopics);
-        } else if (this.config.subject === 'trigonometry') {
+        } else if (subject === 'trigonometry') {
             return this.generateTrigProblem(selectedTopics);
-        } else if (this.config.subject === 'calculus') {
+        } else if (subject === 'calculus') {
             return this.generateCalculusProblem(selectedTopics);
-        } else if (this.config.subject === 'statistics') {
+        } else if (subject === 'statistics') {
             return this.generateStatisticsProblem(selectedTopics);
-        } else if (this.config.subject === 'measurement') {
+        } else if (subject === 'measurement') {
             return this.generateMeasurementProblem(selectedTopics);
-        } else if (this.config.subject === 'precalculus') {
+        } else if (subject === 'precalculus') {
             return this.generatePrecalculusProblem(selectedTopics);
         } else {
             return this.generateArithmeticEquation(operation, selectedTopics);
@@ -2710,14 +2732,19 @@ export class ProblemGenerator {
     }
 
     // Word problem generation
-    generateWordProblem(operation) {
+    generateWordProblem(operation, subject = null) {
+        // Use provided subject or get random one
+        if (!subject) {
+            subject = this.getRandomSubject();
+        }
+
         let problem;
         let attempts = 0;
         const maxAttempts = 50;
 
         do {
             // Subject-specific word problems
-            switch (this.config.subject) {
+            switch (subject) {
                 case 'algebra':
                     problem = this.generateAlgebraWordProblem();
                     break;

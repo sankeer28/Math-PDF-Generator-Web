@@ -132,7 +132,7 @@ export class PDFGenerator {
             answerKey
         } = formData;
 
-        this.problemGenerator.setConfig(gradeLevel, difficulty, subject);
+        this.problemGenerator.setConfig(gradeLevel, difficulty, formData.subjects);
 
         const zip = new JSZip();
         const totalPDFs = parseInt(numPDFs);
@@ -651,7 +651,7 @@ export class PDFGenerator {
                 throw new Error('No operations selected');
             }
 
-            this.problemGenerator.setConfig(gradeLevel, difficulty, subject);
+            this.problemGenerator.setConfig(gradeLevel, difficulty, formData.subjects);
             this.problemGenerator.clearUsedProblems(); // Clear previous problems
 
             const previewContent = document.getElementById('preview-content');
@@ -776,7 +776,7 @@ export class PDFGenerator {
             }
 
             // Configure problem generator
-            this.problemGenerator.setConfig(gradeLevel, difficulty, subject);
+            this.problemGenerator.setConfig(gradeLevel, difficulty, formData.subjects);
             this.problemGenerator.clearUsedProblems();
 
             // Create a new PDF document

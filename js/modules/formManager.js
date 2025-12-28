@@ -33,14 +33,6 @@ export class FormManager {
             this.updateWorksheetTitle();
         });
 
-        document.getElementById('subject').addEventListener('change', () => {
-            this.updateTopicOptions();
-            this.updateOperationTypesForSubject();
-            this.updateProblemTypeForSubject();
-            this.toggleOperationsVisibility();
-            this.updateWorksheetTitle();
-        });
-
         // Difficulty slider update
         document.getElementById('difficulty').addEventListener('input', (e) => {
             this.updateDifficultyLabel(e.target.value);
@@ -88,13 +80,18 @@ export class FormManager {
 
     updateWorksheetTitle() {
         const gradeLevel = document.getElementById('gradeLevel').value;
-        const subject = document.getElementById('subject').value;
         const titleInput = document.getElementById('pdfTitle');
 
         // Get grade name
         const gradeName = GRADE_CONFIGS[gradeLevel]?.name || 'Math';
 
-        // Get subject name
+        // Get selected subjects
+        const subjectCheckboxes = document.querySelectorAll('.subject-checkbox');
+        const selectedSubjects = Array.from(subjectCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+
+        // Get subject name(s)
         const subjectNames = {
             arithmetic: 'Arithmetic',
             measurement: 'Measurement',
@@ -105,7 +102,13 @@ export class FormManager {
             precalculus: 'Pre-Calculus',
             calculus: 'Calculus'
         };
-        const subjectName = subjectNames[subject] || 'Math';
+
+        let subjectName = 'Math';
+        if (selectedSubjects.length === 1) {
+            subjectName = subjectNames[selectedSubjects[0]] || 'Math';
+        } else if (selectedSubjects.length > 1) {
+            subjectName = 'Mixed Subjects';
+        }
 
         // Generate title
         const newTitle = `${gradeName} ${subjectName} Practice`;
@@ -113,13 +116,17 @@ export class FormManager {
     }
 
     toggleOperationsVisibility() {
-        const subject = document.getElementById('subject').value;
+        // Get selected subjects
+        const subjectCheckboxes = document.querySelectorAll('.subject-checkbox');
+        const selectedSubjects = Array.from(subjectCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
         const operationsSection = document.getElementById('operationsSection');
 
         if (!operationsSection) return;
 
-        // Only show operations for arithmetic subject
-        if (subject === 'arithmetic') {
+        // Only show operations if arithmetic is one of the selected subjects
+        if (selectedSubjects.includes('arithmetic')) {
             operationsSection.style.display = 'block';
         } else {
             operationsSection.style.display = 'none';
@@ -140,13 +147,10 @@ export class FormManager {
 
     updateSubjectOptions() {
         const gradeLevel = document.getElementById('gradeLevel').value;
-        const subjectSelect = document.getElementById('subject');
+        const subjectContainer = document.getElementById('subjectSelection');
         const availableSubjects = GRADE_CONFIGS[gradeLevel].subjects;
 
-        // Clear current options
-        subjectSelect.innerHTML = '';
-
-        // Add available subjects
+        // Subject display names
         const subjectNames = {
             arithmetic: 'Basic Arithmetic',
             measurement: 'Measurement & Data',
@@ -158,11 +162,53 @@ export class FormManager {
             calculus: 'Calculus'
         };
 
+        // Clear current checkboxes
+        subjectContainer.innerHTML = `
+            <label class="checkbox-label">
+                <input type="checkbox" value="all" id="subject-all" class="checkbox-input" checked>
+                <span class="checkbox-text">All Subjects</span>
+            </label>
+        `;
+
+        // Add checkboxes for each available subject
         availableSubjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject;
-            option.textContent = subjectNames[subject];
-            subjectSelect.appendChild(option);
+            const label = document.createElement('label');
+            label.className = 'checkbox-label';
+            label.innerHTML = `
+                <input type="checkbox" value="${subject}" class="checkbox-input subject-checkbox" checked>
+                <span class="checkbox-text">${subjectNames[subject]}</span>
+            `;
+            subjectContainer.appendChild(label);
+        });
+
+        // Setup "All Subjects" checkbox behavior
+        const allSubjectsCheckbox = document.getElementById('subject-all');
+        const subjectCheckboxes = document.querySelectorAll('.subject-checkbox');
+
+        allSubjectsCheckbox.addEventListener('change', () => {
+            subjectCheckboxes.forEach(checkbox => {
+                checkbox.checked = allSubjectsCheckbox.checked;
+            });
+            this.updateOperationTypesForSubject();
+            this.updateTopicOptions();
+        });
+
+        subjectCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const allChecked = Array.from(subjectCheckboxes).every(cb => cb.checked);
+                const noneChecked = Array.from(subjectCheckboxes).every(cb => !cb.checked);
+
+                if (allChecked) {
+                    allSubjectsCheckbox.checked = true;
+                } else if (noneChecked) {
+                    allSubjectsCheckbox.checked = false;
+                } else {
+                    allSubjectsCheckbox.checked = false;
+                }
+
+                this.updateOperationTypesForSubject();
+                this.updateTopicOptions();
+            });
         });
 
         // Update operation types and problem type based on subject
@@ -172,7 +218,13 @@ export class FormManager {
     }
 
     updateTopicOptions() {
-        const subject = document.getElementById('subject').value;
+        // Get first selected subject for topic display
+        const subjectCheckboxes = document.querySelectorAll('.subject-checkbox');
+        const selectedSubjects = Array.from(subjectCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+
+        const subject = selectedSubjects[0] || 'arithmetic';
         const gradeLevel = document.getElementById('gradeLevel').value;
         const topicContainer = document.getElementById('topicSelection');
 
@@ -234,7 +286,13 @@ export class FormManager {
     }
 
     updateOperationTypesForSubject() {
-        const subject = document.getElementById('subject').value;
+        // Get selected subjects
+        const subjectCheckboxes = document.querySelectorAll('.subject-checkbox');
+        const selectedSubjects = Array.from(subjectCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+        const subject = selectedSubjects[0] || 'arithmetic';
+
         const operationGroup = document.querySelector('.operation-grid');
         const operationSection = operationGroup?.closest('.form-group');
 
@@ -254,7 +312,12 @@ export class FormManager {
     }
 
     updateProblemTypeForSubject() {
-        const subject = document.getElementById('subject').value;
+        // Get selected subjects
+        const subjectCheckboxes = document.querySelectorAll('.subject-checkbox');
+        const selectedSubjects = Array.from(subjectCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+        const subject = selectedSubjects[0] || 'arithmetic';
         const gradeLevel = document.getElementById('gradeLevel').value;
         const problemTypeSelect = document.getElementById('problemType');
 
@@ -311,6 +374,22 @@ export class FormManager {
             .filter(checkbox => checkbox.checked)
             .map(checkbox => checkbox.value);
 
+        // Get selected subjects
+        const allSubjectsChecked = document.getElementById('subject-all').checked;
+        let selectedSubjects = [];
+
+        if (allSubjectsChecked) {
+            // If "All Subjects" is checked, get all available subjects for the grade
+            const gradeLevel = document.getElementById('gradeLevel').value;
+            selectedSubjects = GRADE_CONFIGS[gradeLevel].subjects;
+        } else {
+            // Otherwise, get checked subject checkboxes
+            const subjectCheckboxes = document.querySelectorAll('.subject-checkbox');
+            selectedSubjects = Array.from(subjectCheckboxes)
+                .filter(checkbox => checkbox.checked)
+                .map(checkbox => checkbox.value);
+        }
+
         // Get selected topics
         const allTopicsChecked = document.getElementById('topic-all').checked;
         let selectedTopics = [];
@@ -329,7 +408,7 @@ export class FormManager {
         return {
             gradeLevel: document.getElementById('gradeLevel').value,
             difficulty: difficultyMap[difficultyValue] || 'medium',
-            subject: document.getElementById('subject').value,
+            subjects: selectedSubjects,  // Changed from 'subject' to 'subjects' (array)
             topics: allTopicsChecked ? 'all' : selectedTopics,
             problemType: document.getElementById('problemType').value,
             operations: selectedOperations.length > 0 ? selectedOperations : ['addition', 'subtraction', 'multiplication', 'division'],

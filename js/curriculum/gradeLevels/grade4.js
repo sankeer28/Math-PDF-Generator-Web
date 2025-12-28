@@ -12,7 +12,7 @@ export const grade4 = {
     description: 'Mastery of multiplication facts to 12×12, multi-digit operations, decimal tenths, equivalent fractions',
 
     // Available subjects (Ontario Strands: Number, Algebra, Data, Spatial Sense, Financial Literacy)
-    subjects: ['arithmetic', 'measurement', 'geometry', 'statistics'],
+    subjects: ['arithmetic', 'measurement', 'algebra', 'geometry', 'statistics'],
 
     // Number range (Ontario: multi-digit numbers)
     maxNumber: 10000,

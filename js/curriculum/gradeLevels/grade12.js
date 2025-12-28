@@ -12,7 +12,7 @@ export const grade12 = {
     description: 'MHF4U/MCV4U: Polynomial/rational/logarithmic/trigonometric functions, calculus, vectors',
 
     // Available subjects
-    subjects: ['precalculus', 'calculus', 'statistics', 'trigonometry'],
+    subjects: ['algebra', 'geometry', 'trigonometry', 'precalculus', 'calculus', 'statistics'],
 
     // Number range
     maxNumber: 10000000,

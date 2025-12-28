@@ -12,7 +12,7 @@ export const grade5 = {
     description: 'Introduction to percentages, fraction operations, decimal operations, numbers to 100,000',
 
     // Available subjects (Ontario Strands: Number, Algebra, Data, Spatial Sense, Financial Literacy)
-    subjects: ['arithmetic', 'measurement', 'geometry', 'statistics'],
+    subjects: ['arithmetic', 'measurement', 'algebra', 'geometry', 'statistics'],
 
     // Number range (Ontario: large numbers, decimals)
     maxNumber: 100000,
