@@ -38,15 +38,6 @@ export class FormManager {
             this.updateDifficultyLabel(e.target.value);
         });
 
-        // Topic selection handlers
-        document.addEventListener('change', (e) => {
-            if (e.target.id === 'topic-all') {
-                this.handleAllTopicsToggle(e.target.checked);
-            } else if (e.target.classList.contains('topic-checkbox')) {
-                this.handleIndividualTopicToggle();
-            }
-        });
-
         // Initialize subject and topic options
         this.updateSubjectOptions();
         this.updateTopicOptions();
@@ -218,31 +209,49 @@ export class FormManager {
     }
 
     updateTopicOptions() {
-        // Get first selected subject for topic display
+        // Get all selected subjects for comprehensive topic display
         const subjectCheckboxes = document.querySelectorAll('.subject-checkbox');
         const selectedSubjects = Array.from(subjectCheckboxes)
             .filter(checkbox => checkbox.checked)
             .map(checkbox => checkbox.value);
 
-        const subject = selectedSubjects[0] || 'arithmetic';
         const gradeLevel = document.getElementById('gradeLevel').value;
         const topicContainer = document.getElementById('topicSelection');
 
-        if (!subject || !SUBJECT_TOPICS[subject]) {
+        // Map specific grades to broader categories used in subject files
+        const getGradeCategory = (gradeId) => {
+            const gradeNum = parseInt(gradeId.replace('grade', ''));
+            if (gradeNum >= 1 && gradeNum <= 5) return 'elementary';
+            if (gradeNum >= 6 && gradeNum <= 8) return 'middle';
+            if (gradeNum >= 9 && gradeNum <= 12) return 'high';
+            return 'college';
+        };
+
+        const gradeCategory = getGradeCategory(gradeLevel);
+
+        if (selectedSubjects.length === 0) {
+            topicContainer.innerHTML = `
+                <label class="checkbox-label">
+                    <input type="checkbox" value="all" id="topic-all" class="checkbox-input" checked>
+                    <span class="checkbox-text">All Topics</span>
+                </label>
+            `;
             return;
         }
 
-        const allTopics = SUBJECT_TOPICS[subject].topics;
+        // Subject display names for grouping
+        const subjectNames = {
+            arithmetic: 'Arithmetic',
+            measurement: 'Measurement',
+            algebra: 'Algebra',
+            geometry: 'Geometry',
+            statistics: 'Statistics',
+            trigonometry: 'Trigonometry',
+            precalculus: 'Pre-Calculus',
+            calculus: 'Calculus'
+        };
 
-        // Filter topics by grade level
-        const gradeAppropriateTopics = Object.entries(allTopics).filter(([key, topicData]) => {
-            if (typeof topicData === 'string') {
-                return true;
-            }
-            return topicData.grades && topicData.grades.includes(gradeLevel);
-        });
-
-        // Clear existing topics
+        // Clear existing topics - "All Topics" checkbox starts checked
         topicContainer.innerHTML = `
             <label class="checkbox-label">
                 <input type="checkbox" value="all" id="topic-all" class="checkbox-input" checked>
@@ -250,40 +259,74 @@ export class FormManager {
             </label>
         `;
 
-        // Add individual grade-appropriate topics
-        gradeAppropriateTopics.forEach(([key, topicData]) => {
-            const label = document.createElement('label');
-            label.className = 'checkbox-label';
+        // Add topics from each selected subject, grouped by subject
+        selectedSubjects.forEach(subjectId => {
+            const subjectConfig = SUBJECT_TOPICS[subjectId];
 
-            const topicName = typeof topicData === 'string' ? topicData : topicData.name;
+            if (!subjectConfig || !subjectConfig.topics) {
+                return;
+            }
 
-            label.innerHTML = `
-                <input type="checkbox" value="${key}" class="topic-checkbox checkbox-input" disabled>
-                <span class="checkbox-text">${topicName}</span>
-            `;
-            topicContainer.appendChild(label);
-        });
-    }
+            const allTopics = subjectConfig.topics;
 
-    handleAllTopicsToggle(checked) {
-        const topicCheckboxes = document.querySelectorAll('.topic-checkbox');
-        topicCheckboxes.forEach(checkbox => {
-            checkbox.disabled = checked;
-            if (checked) {
-                checkbox.checked = false;
+            // Filter topics by grade level using category mapping
+            const gradeAppropriateTopics = Object.entries(allTopics).filter(([key, topicData]) => {
+                if (typeof topicData === 'string') {
+                    return true;
+                }
+                // Check if the topic's grade array includes the current grade category
+                return topicData.grades && topicData.grades.includes(gradeCategory);
+            });
+
+            // Only show subject header if there are topics for this subject
+            if (gradeAppropriateTopics.length > 0) {
+                // Add subject header (non-interactive)
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'topic-subject-header';
+                headerDiv.style.cssText = 'grid-column: 1 / -1; font-weight: 600; color: var(--accent-primary); margin-top: 8px; font-size: 0.875rem;';
+                headerDiv.textContent = subjectNames[subjectId] || subjectId;
+                topicContainer.appendChild(headerDiv);
+
+                // Add individual grade-appropriate topics for this subject (auto-selected)
+                gradeAppropriateTopics.forEach(([key, topicData]) => {
+                    const label = document.createElement('label');
+                    label.className = 'checkbox-label';
+
+                    const topicName = typeof topicData === 'string' ? topicData : topicData.name;
+
+                    label.innerHTML = `
+                        <input type="checkbox" value="${subjectId}:${key}" class="topic-checkbox checkbox-input" checked>
+                        <span class="checkbox-text">${topicName}</span>
+                    `;
+                    topicContainer.appendChild(label);
+                });
             }
         });
-    }
 
-    handleIndividualTopicToggle() {
+        // Setup "All Topics" checkbox behavior
         const allTopicsCheckbox = document.getElementById('topic-all');
         const topicCheckboxes = document.querySelectorAll('.topic-checkbox');
-        const anyTopicSelected = Array.from(topicCheckboxes).some(cb => cb.checked);
 
-        if (anyTopicSelected) {
-            allTopicsCheckbox.checked = false;
-        }
+        allTopicsCheckbox.addEventListener('change', () => {
+            topicCheckboxes.forEach(checkbox => {
+                checkbox.checked = allTopicsCheckbox.checked;
+            });
+        });
+
+        topicCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const allChecked = Array.from(topicCheckboxes).every(cb => cb.checked);
+                const noneChecked = Array.from(topicCheckboxes).every(cb => !cb.checked);
+
+                if (allChecked) {
+                    allTopicsCheckbox.checked = true;
+                } else {
+                    allTopicsCheckbox.checked = false;
+                }
+            });
+        });
     }
+
 
     updateOperationTypesForSubject() {
         // Get selected subjects

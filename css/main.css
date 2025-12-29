@@ -136,14 +136,31 @@
 /* Topic selection grid */
 .topic-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: var(--spacing-sm);
-    max-height: 200px;
+    max-height: 400px;
     overflow-y: auto;
     padding: var(--spacing-sm);
     background-color: var(--bg-primary);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-md);
+}
+
+/* Topic subject headers within the grid */
+.topic-subject-header {
+    grid-column: 1 / -1;
+    font-weight: 600;
+    color: var(--accent-primary);
+    margin-top: 8px;
+    font-size: 0.875rem;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-light);
+}
+
+.topic-subject-header:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
 }
 
 /* Operation checkboxes */
