@@ -7,12 +7,14 @@
 
 export const grade12 = {
     id: 'grade12',
-    name: 'Grade 12 (Pre-Calc/Calc)',
+    name: 'Grade 12 (MHF4U / MCV4U)',
+    course: 'MHF4U',
+    courseName: 'Advanced Functions, and Calculus and Vectors',
     ageRange: '17-18 years',
     description: 'MHF4U/MCV4U: Polynomial/rational/logarithmic/trigonometric functions, calculus, vectors',
 
     // Available subjects
-    subjects: ['algebra', 'geometry', 'trigonometry', 'precalculus', 'calculus', 'statistics'],
+    subjects: ['algebra', 'geometry', 'trigonometry', 'precalculus', 'calculus', 'statistics', 'financialLiteracy'],
 
     // Number range
     maxNumber: 10000000,

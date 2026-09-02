@@ -12,7 +12,7 @@ export const grade7 = {
     description: 'Rational numbers to 1 billion, integer operations, solving equations with decimals, proportional relationships',
 
     // Available subjects (Ontario Strands: Number, Algebra, Data, Spatial Sense, Financial Literacy)
-    subjects: ['arithmetic', 'algebra', 'geometry', 'statistics'],
+    subjects: ['arithmetic', 'measurement', 'algebra', 'geometry', 'statistics', 'financialLiteracy'],
 
     // Number range (Ontario: numbers to 1 billion)
     maxNumber: 1000000000,

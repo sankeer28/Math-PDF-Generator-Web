@@ -12,7 +12,7 @@ export const grade8 = {
     description: 'Writing and solving algebraic equations, linear relationships, Pythagorean theorem, geometric transformations',
 
     // Available subjects (Ontario Strands: Number, Algebra, Data, Spatial Sense, Financial Literacy)
-    subjects: ['algebra', 'geometry', 'statistics'],
+    subjects: ['arithmetic', 'measurement', 'algebra', 'geometry', 'statistics', 'financialLiteracy'],
 
     // Number range (Ontario: focus on algebraic thinking)
     maxNumber: 1000000,

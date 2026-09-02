@@ -28,13 +28,38 @@ and edited further.
 
 ## Features
 
-- Kindergarten through grade 12, across arithmetic, measurement, algebra, geometry,
-  statistics, trigonometry, pre-calculus and calculus
+- Grades 1-12, following the **Ontario mathematics curriculum** (2020 for Grades 1-8,
+  MTH1W and the senior courses above that)
+- Nine subjects mapped to the Ontario strands: Number, Algebra, Data & Probability,
+  Geometry & Spatial Sense, Measurement, Financial Literacy, Trigonometry,
+  Advanced Functions and Calculus — 90 topics in all
+- Topics are filtered to the grade that teaches them, so a Grade 3 worksheet
+  cannot offer integers and a Grade 11 one is not padded with counting
+- **Per-topic customisation**: open a topic to set its number range, denominators,
+  decimal places, exponents, whether negatives or remainders are allowed, and more
 - Equation pages, word-problem pages, or an alternating mix
 - Optional answer key, name/date/score/grade fields, page border, circled question numbers,
   configurable page numbers, Letter or A4
 - Generate many worksheets at once — each gets its own problems, and they download as a ZIP
 - Runs offline after the first visit; nothing you type leaves your machine
+
+## The curriculum model
+
+Everything about what a worksheet can contain is data, under `js/curriculum/`:
+
+| Path | What it holds |
+|---|---|
+| `gradeLevels/gradeN.js` | one grade: its subjects, number ceiling and Ontario course code |
+| `subjects/*.js` | topics, each declaring its strand, the grades that teach it, and its parameters |
+| `config/grades.js` | grade ids, ranges and the Ontario strand names |
+| `config/parameters.js` | the parameter definitions topics draw on, with their limits |
+| `templates/wordProblems.js` | the contextual word-problem templates |
+| `templates/gradeProblems.js` | per-grade equation and word-problem draws |
+| `templates/financialProblems.js` | the Financial Literacy strand |
+
+Adding a topic means adding an entry, not editing a generator. `tools/check-curriculum.mjs`
+typesets a worksheet for every grade, subject and difficulty to prove the whole
+matrix still compiles.
 
 ## Running locally
 
@@ -57,7 +82,7 @@ form options ──▶ problemGenerator ──▶ worksheet.js ──▶ .tex �
 
 | Path | What lives there |
 |---|---|
-| `js/curriculum/` | grade levels, subjects, topics and word-problem contexts |
+| `js/curriculum/` | grades, subjects, topics, parameters and problem templates |
 | `js/modules/problemGenerator.js` | problem generation and de-duplication |
 | `js/latex/escape.js` | text and expressions → LaTeX (fractions, radicals, symbols) |
 | `js/latex/worksheet.js` | builds the LaTeX document from the form options |

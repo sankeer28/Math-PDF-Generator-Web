@@ -7,12 +7,14 @@
 
 export const grade10 = {
     id: 'grade10',
-    name: 'Grade 10 (Geometry)',
+    name: 'Grade 10 (MPM2D)',
+    course: 'MPM2D',
+    courseName: 'Principles of Mathematics',
     ageRange: '15-16 years',
     description: 'MPM2D: Quadratic relations, trigonometry, analytic geometry, linear systems',
 
     // Available subjects (MPM2D strands)
-    subjects: ['algebra', 'geometry', 'trigonometry', 'statistics'],
+    subjects: ['arithmetic', 'algebra', 'geometry', 'trigonometry', 'statistics', 'financialLiteracy'],
 
     // Number range
     maxNumber: 1000000,

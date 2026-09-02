@@ -75,7 +75,12 @@ export class WorksheetGenerator {
      * @returns {string}
      */
     buildSource(options) {
-        this.problemGenerator.setConfig(options.gradeLevel, options.difficulty, options.subjects);
+        this.problemGenerator.setConfig(
+            options.gradeLevel,
+            options.difficulty,
+            options.subjects,
+            options.topicParameters
+        );
         this.problemGenerator.clearUsedProblems();
         return buildWorksheet(options, this.#generatePages(options));
     }

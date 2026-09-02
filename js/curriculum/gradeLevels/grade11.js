@@ -7,12 +7,14 @@
 
 export const grade11 = {
     id: 'grade11',
-    name: 'Grade 11 (Algebra II)',
+    name: 'Grade 11 (MCR3U)',
+    course: 'MCR3U',
+    courseName: 'Functions',
     ageRange: '16-17 years',
     description: 'MCR3U: Functions, exponential functions, trigonometric functions, sequences and series',
 
     // Available subjects
-    subjects: ['algebra', 'geometry', 'trigonometry', 'precalculus', 'statistics'],
+    subjects: ['arithmetic', 'algebra', 'geometry', 'trigonometry', 'precalculus', 'statistics', 'financialLiteracy'],
 
     // Number range
     maxNumber: 10000000,

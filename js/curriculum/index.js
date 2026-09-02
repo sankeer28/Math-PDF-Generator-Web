@@ -33,9 +33,12 @@ import { statistics } from './subjects/statistics.js';
 import { trigonometry } from './subjects/trigonometry.js';
 import { precalculus } from './subjects/precalculus.js';
 import { calculus } from './subjects/calculus.js';
+import { financialLiteracy } from './subjects/financialLiteracy.js';
 
 // Configuration Data
 import { DIFFICULTY_MULTIPLIERS, getDifficultyMultiplier, getDifficultyConfig } from './config/difficulty.js';
+import { ALL_GRADES, STRANDS, gradeRange, gradeNumber } from './config/grades.js';
+import { PARAMETER_DEFINITIONS, parametersForTopic, defaultParameterValues, coerceParameter } from './config/parameters.js';
 import { names, professions, places, items, actions, timeframes, measurements, events, seasons, activities, comparisons, getRandomItem, getRandomItems } from './config/contextualData.js';
 
 /**
@@ -68,13 +71,24 @@ export const SUBJECT_TOPICS = {
     statistics,
     trigonometry,
     precalculus,
-    calculus
+    calculus,
+    financialLiteracy
 };
 
 /**
  * Difficulty settings and multipliers
  */
 export { DIFFICULTY_MULTIPLIERS, getDifficultyMultiplier, getDifficultyConfig };
+
+/**
+ * Grade helpers and the Ontario strand names
+ */
+export { ALL_GRADES, STRANDS, gradeRange, gradeNumber };
+
+/**
+ * Per-topic parameters
+ */
+export { PARAMETER_DEFINITIONS, parametersForTopic, defaultParameterValues, coerceParameter };
 
 /**
  * Contextual data for word problems

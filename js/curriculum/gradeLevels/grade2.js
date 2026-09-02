@@ -12,7 +12,7 @@ export const grade2 = {
     description: 'Numbers to 200, addition and subtraction with regrouping, introduction to equal sharing and fractions',
 
     // Available subjects (Ontario Strands: Number, Algebra, Data, Spatial Sense, Financial Literacy)
-    subjects: ['arithmetic', 'measurement', 'geometry', 'statistics'],
+    subjects: ['arithmetic', 'measurement', 'geometry', 'statistics', 'financialLiteracy'],
 
     // Number range (Ontario: working with numbers up to 200)
     maxNumber: 200,

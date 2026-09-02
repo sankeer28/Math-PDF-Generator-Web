@@ -12,7 +12,7 @@ export const grade1 = {
     description: 'Numbers to 50, addition and subtraction to 20, skip counting, money to 20¢',
 
     // Available subjects (Ontario Strands: Number, Algebra, Data, Spatial Sense, Financial Literacy)
-    subjects: ['arithmetic', 'measurement', 'geometry', 'statistics'],
+    subjects: ['arithmetic', 'measurement', 'geometry', 'statistics', 'financialLiteracy'],
 
     // Number range (Ontario: representing and ordering to 50, operations to 20)
     maxNumber: 50,

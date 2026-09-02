@@ -6,6 +6,10 @@
 
 import { randomChoice } from './utils.js';
 import { GRADE_CONFIGS, DIFFICULTY_MULTIPLIERS, CONTEXTUAL_DATA } from './constants.js';
+import { WORD_PROBLEM_TEMPLATES } from '../curriculum/templates/wordProblems.js';
+import { GRADE_EQUATIONS, GRADE_WORD_PROBLEMS } from '../curriculum/templates/gradeProblems.js';
+import { FINANCIAL_PROBLEMS } from '../curriculum/templates/financialProblems.js';
+import { SUBJECT_TOPICS, defaultParameterValues, parametersForTopic, coerceParameter } from '../curriculum/index.js';
 
 export class ProblemGenerator {
     constructor() {
@@ -19,7 +23,7 @@ export class ProblemGenerator {
         this.uniquenessThreshold = 0.85; // 85% similarity threshold - stricter to catch more duplicates
     }
 
-    setConfig(gradeLevel, difficulty, subjects) {
+    setConfig(gradeLevel, difficulty, subjects, topicParameters = {}) {
         // Validate inputs
         if (!GRADE_CONFIGS[gradeLevel]) {
             console.error(`Invalid grade level: ${gradeLevel}. Available:`, Object.keys(GRADE_CONFIGS));
@@ -47,13 +51,49 @@ export class ProblemGenerator {
             maxNumber: Math.floor(GRADE_CONFIGS[gradeLevel].maxNumber * difficultyValue)
         };
 
-        console.log('Problem generator configured:', {
-            gradeLevel,
-            difficulty,
-            difficultyValue,
-            subjects,
-            maxNumber: this.config.maxNumber
-        });
+        this.topicParameters = this.resolveTopicParameters(topicParameters);
+    }
+
+    /**
+     * Merges the user's per-topic settings over each topic's declared defaults,
+     * clamping every value to what its definition allows.
+     *
+     * @param {Record<string, Record<string, *>>} overrides - by topic id
+     * @returns {Record<string, Record<string, number|boolean|string>>}
+     */
+    resolveTopicParameters(overrides) {
+        const resolved = {};
+
+        for (const subject of Object.values(SUBJECT_TOPICS)) {
+            for (const [topicId, topic] of Object.entries(subject.topics)) {
+                const values = defaultParameterValues(topic);
+                const supplied = overrides?.[topicId];
+
+                if (supplied) {
+                    for (const definition of parametersForTopic(topic)) {
+                        if (definition.id in supplied) {
+                            values[definition.id] = coerceParameter(definition, supplied[definition.id]);
+                        }
+                    }
+                }
+                resolved[topicId] = values;
+            }
+        }
+        return resolved;
+    }
+
+    /**
+     * The settings in force for a topic. Falls back to the grade's own ceiling
+     * so a generator can always ask for `maxNumber` and get something sensible.
+     *
+     * @param {string} topicId
+     * @returns {Record<string, number|boolean|string>}
+     */
+    paramsFor(topicId) {
+        return {
+            maxNumber: this.config?.maxNumber ?? 100,
+            ...(this.topicParameters?.[topicId] || {}),
+        };
     }
 
     getRandomSubject() {
@@ -95,6 +135,29 @@ export class ProblemGenerator {
         }
     }
 
+    /**
+     * Draws one problem from a per-grade table.
+     *
+     * Falls back within the grade — the requested operation, then `any`, then
+     * addition — because not every grade covers every operation (Grade 1 does
+     * no formal division, for instance).
+     *
+     * @param {Record<string, Record<string, Function[]>>} table
+     * @param {string} operation
+     * @returns {{question: string, answer: string|number}|null} null when the
+     *   grade has no table, so the caller can fall through to other generators
+     */
+    drawFromGradeTable(table, operation) {
+        const grade = table[this.config?.grade?.id];
+        if (!grade) return null;
+
+        const draws = grade[operation] || grade.any || grade.addition;
+        if (!draws || draws.length === 0) return null;
+
+        const draw = () => randomChoice(draws)(draw);
+        return draw();
+    }
+
     validateOperationForSubject(operation, subject) {
         switch (subject) {
             case 'algebra':
@@ -114,6 +177,8 @@ export class ProblemGenerator {
                 return 'measurement';
             case 'precalculus':
                 return 'precalculus';
+            case 'financialLiteracy':
+                return 'financial';
             case 'arithmetic':
             default:
                 return operation;
@@ -140,13 +205,19 @@ export class ProblemGenerator {
             return this.generateMeasurementProblem(selectedTopics);
         } else if (subject === 'precalculus') {
             return this.generatePrecalculusProblem(selectedTopics);
+        } else if (subject === 'financialLiteracy') {
+            return this.generateFinancialProblem(selectedTopics);
         } else {
             return this.generateArithmeticEquation(operation, selectedTopics);
         }
     }
 
     generateArithmeticEquation(operation, selectedTopics = 'all') {
-        // ROUTE TO GRADE-SPECIFIC GENERATORS FOR UNIQUE QUESTIONS
+        // Grades 1-8 have their own tables of grade-appropriate draws; grades
+        // 9-12 fall through to the subject generators below.
+        const fromGrade = this.drawFromGradeTable(GRADE_EQUATIONS, operation);
+        if (fromGrade) return fromGrade;
+
         const gradeId = this.config?.grade?.id;
         if (gradeId) {
             const gradeNum = gradeId.replace('grade', '');
@@ -1268,6 +1339,10 @@ export class ProblemGenerator {
                         return this.generateQuadraticExpansion();
                     case 'factoring':
                         return this.generateFactoring();
+                    case 'linear-relations':
+                        return this.generateLinearRelationProblem();
+                    case 'coding':
+                        return this.generateCodingProblem();
                     default:
                         continue;
                 }
@@ -1280,6 +1355,83 @@ export class ProblemGenerator {
             () => this.generateFactoring()
         ];
         return problems[Math.floor(Math.random() * problems.length)]();
+    }
+
+    /**
+     * Linear relations: rate of change, initial value, and moving between a
+     * table, a graph and an equation (Ontario strand C).
+     */
+    generateLinearRelationProblem() {
+        const p = this.paramsFor('linear-relations');
+        const limit = Math.max(4, Math.min(Number(p.maxNumber) || 20, 40));
+        const slope = randomChoice([-1, 1]) * (Math.floor(Math.random() * limit) + 1);
+        const intercept = Math.floor(Math.random() * limit) + 1;
+        const x = Math.floor(Math.random() * 8) + 2;
+
+        const variants = [
+            () => ({
+                question: `A linear relation passes through (0, ${intercept}) and (1, ${intercept + slope}). What is its rate of change?`,
+                answer: `${slope}`,
+            }),
+            () => ({
+                question: `Write the equation of the line with slope ${slope} and y-intercept ${intercept}.`,
+                answer: `y = ${slope}x + ${intercept}`,
+            }),
+            () => ({
+                question: `For y = ${slope}x + ${intercept}, find y when x = ${x}.`,
+                answer: `${slope * x + intercept}`,
+            }),
+            () => ({
+                question: `A table shows y = ${intercept} when x = 0 and y = ${intercept + slope * x} when x = ${x}. What is the rate of change?`,
+                answer: `${slope}`,
+            }),
+        ];
+        return randomChoice(variants)();
+    }
+
+    /**
+     * Coding: tracing a short sequence of instructions, which Ontario places in
+     * the Algebra strand from Grade 1 onward.
+     */
+    generateCodingProblem() {
+        const p = this.paramsFor('coding');
+        const steps = Math.max(3, Math.min(Number(p.terms) || 4, 8));
+        const limit = Math.max(10, Math.min(Number(p.maxNumber) || 50, 200));
+
+        const start = Math.floor(Math.random() * limit) + 1;
+        const instructions = [];
+        let value = start;
+
+        for (let i = 0; i < steps; i += 1) {
+            const amount = Math.floor(Math.random() * 9) + 2;
+            if (Math.random() < 0.5) {
+                instructions.push(`ADD ${amount}`);
+                value += amount;
+            } else {
+                instructions.push(`SUBTRACT ${amount}`);
+                value -= amount;
+            }
+        }
+
+        const variants = [
+            () => ({
+                question: `Start with ${start}, then ${instructions.join(', ')}. What is the final value?`,
+                answer: `${value}`,
+            }),
+            () => {
+                const times = Math.floor(Math.random() * 3) + 2;
+                const step = Math.floor(Math.random() * 5) + 2;
+                return {
+                    question: `REPEAT ${times} times: ADD ${step}. Starting at ${start}, what is the final value?`,
+                    answer: `${start + times * step}`,
+                };
+            },
+            () => ({
+                question: `A program runs ${instructions.join(', ')} and ends at ${value}. What value did it start with?`,
+                answer: `${start}`,
+            }),
+        ];
+        return randomChoice(variants)();
     }
 
     generateAlgebraicExpression() {
@@ -2766,6 +2918,10 @@ export class ProblemGenerator {
                 case 'precalculus':
                     problem = this.generatePrecalculusWordProblem();
                     break;
+                case 'financialLiteracy':
+                    // Financial literacy questions are written in context already.
+                    problem = this.generateFinancialProblem();
+                    break;
                 default:
                     // For arithmetic, use standard word problems
                     problem = this.generateStandardWordProblem(operation);
@@ -2856,8 +3012,30 @@ export class ProblemGenerator {
         };
     }
 
+    /**
+     * Draws a financial literacy problem, honouring the topics the user chose
+     * and the parameters set on whichever topic is drawn.
+     *
+     * @param {string[]|'all'} [selectedTopics]
+     */
+    generateFinancialProblem(selectedTopics = 'all') {
+        const available = Object.keys(FINANCIAL_PROBLEMS).filter((topicId) => {
+            const topic = SUBJECT_TOPICS.financialLiteracy.topics[topicId];
+            if (!topic?.grades.includes(this.config?.grade?.id)) return false;
+            if (selectedTopics === 'all' || !selectedTopics?.length) return true;
+            return selectedTopics.includes(topicId);
+        });
+
+        // Nothing chosen that this grade can offer: fall back to the whole strand.
+        const topicId = randomChoice(available.length ? available : Object.keys(FINANCIAL_PROBLEMS));
+        return randomChoice(FINANCIAL_PROBLEMS[topicId])(this.paramsFor(topicId));
+    }
+
     generateStandardWordProblem(operation) {
-        // ROUTE TO GRADE-SPECIFIC WORD PROBLEM GENERATORS FOR AGE-APPROPRIATE CONTEXTS
+        // Grades 1-8 draw from their own tables so contexts stay age-appropriate.
+        const fromGrade = this.drawFromGradeTable(GRADE_WORD_PROBLEMS, operation);
+        if (fromGrade) return fromGrade;
+
         const gradeId = this.config?.grade?.id;
         if (gradeId) {
             const gradeNum = gradeId.replace('grade', '');
@@ -2889,1489 +3067,15 @@ export class ProblemGenerator {
         }
     }
 
+    /**
+     * Draws one contextual word problem for `operation` from the shared
+     * template table. "mixed", and anything that is not one of the four
+     * arithmetic operations, picks an operation at random.
+     */
     generateBasicWordProblem(operation) {
-        const contexts = CONTEXTUAL_DATA;
-
-        switch (operation) {
-            case "addition":
-                return this.generateAdditionProblem(contexts);
-            case "subtraction":
-                return this.generateSubtractionProblem(contexts);
-            case "multiplication":
-                return this.generateMultiplicationProblem(contexts);
-            case "division":
-                return this.generateDivisionProblem(contexts);
-            case "mixed":
-                const operations = ["addition", "subtraction", "multiplication", "division"];
-                return this.generateBasicWordProblem(operations[Math.floor(Math.random() * operations.length)]);
-            default:
-                // Handle unknown operations (like 'geometric', 'algebraic', etc.) by defaulting to random operation
-                console.warn(`Unknown operation '${operation}' in generateBasicWordProblem, defaulting to random`);
-                const fallbackOps = ["addition", "subtraction", "multiplication", "division"];
-                return this.generateBasicWordProblem(fallbackOps[Math.floor(Math.random() * fallbackOps.length)]);
-        }
-    }
-
-    // Addition word problem templates
-    generateAdditionProblem(contexts) {
-        const templates = [
-            this.additionTemplate1,
-            this.additionTemplate2,
-            this.additionTemplate3,
-            this.additionTemplate4,
-            this.additionTemplate5,
-            this.additionTemplate6,
-            this.additionTemplate7,
-            this.additionTemplate8,
-            this.additionTemplate9,
-            this.additionTemplate10,
-            this.additionTemplate11,
-            this.additionTemplate12,
-            this.additionTemplate13,
-            this.additionTemplate14,
-            this.additionTemplate15,
-            this.additionTemplate16,
-            this.additionTemplate17,
-            this.additionTemplate18,
-            this.additionTemplate19,
-            this.additionTemplate20
-        ];
-
-        const template = templates[Math.floor(Math.random() * templates.length)];
-        return template.call(this, contexts);
-    }
-
-    additionTemplate1(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.addition);
-        const maxNum = Math.min(this.config.maxNumber, 500);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 10;
-        const num2 = Math.floor(Math.random() * maxNum) + 5;
-
-        return {
-            question: `${name} had ${num1} ${items} in their collection. Last week, they ${action} ${num2} more ${items}. How many ${items} does ${name} have now?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate2(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 300);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 15;
-        const num2 = Math.floor(Math.random() * maxNum) + 8;
-
-        return {
-            question: `At the ${place}, ${name} counted ${num1} ${items} in the morning. By afternoon, ${num2} more ${items} had arrived. What is the total number of ${items} now?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate3(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 400);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 12;
-        const num2 = Math.floor(Math.random() * maxNum) + 8;
-
-        return {
-            question: `${names[0]} has ${num1} ${items} and ${names[1]} has ${num2} ${items}. If they combine their ${items} together, how many will they have in total?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate4(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const timeframe = randomChoice(contexts.timeframes);
-        const maxNum = Math.min(this.config.maxNumber, 200);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 8;
-        const num2 = Math.floor(Math.random() * maxNum) + 6;
-
-        return {
-            question: `${name} is a ${profession} who creates ${num1} ${items} ${timeframe}. This week, they made an extra ${num2} ${items} for a special project. How many ${items} did they create this week in total?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate5(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const measurement = randomChoice(contexts.measurements);
-        const maxNum = Math.min(this.config.maxNumber, 150);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 20;
-        const num2 = Math.floor(Math.random() * maxNum) + 15;
-
-        return {
-            question: `${name} weighed their collection of ${items} and found it was ${num1} ${measurement}. After adding more ${items}, the collection now weighs ${num1 + num2} ${measurement}. How many ${measurement} of ${items} did ${name} add?`,
-            answer: num2
-        };
-    }
-
-    additionTemplate6(contexts) {
-        const name = randomChoice(contexts.names);
-        const place1 = randomChoice(contexts.places);
-        const place2 = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 250);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 18;
-        const num2 = Math.floor(Math.random() * maxNum) + 12;
-
-        return {
-            question: `${name} visited two locations today. At the ${place1}, they saw ${num1} ${items}. At the ${place2}, they counted ${num2} ${items}. How many ${items} did ${name} see in total during their visits?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate7(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.addition);
-        const maxNum = Math.min(this.config.maxNumber, 180);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 25;
-        const num2 = Math.floor(Math.random() * maxNum) + 18;
-        const num3 = Math.floor(Math.random() * maxNum) + 10;
-
-        return {
-            question: `${name} started the month with ${num1} ${items}. In the first week, they ${action} ${num2} more. In the second week, they got ${num3} additional ${items}. How many ${items} does ${name} have now?`,
-            answer: num1 + num2 + num3
-        };
-    }
-
-    additionTemplate8(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const profession = randomChoice(contexts.professions);
-        const maxNum = Math.min(this.config.maxNumber, 120);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 30;
-        const num2 = Math.floor(Math.random() * maxNum) + 20;
-
-        return {
-            question: `${name}, who works as a ${profession}, needs ${items} for a project. They already have ${num1} ${items} and their colleague brought ${num2} more. What is the total number of ${items} available for the project?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate9(contexts) {
-        const name = randomChoice(contexts.names);
-        const event = randomChoice(contexts.events);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 200);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 15;
-        const num2 = Math.floor(Math.random() * maxNum) + 12;
-
-        return {
-            question: `${name} is organizing a ${event}. They brought ${num1} ${items} and received ${num2} more ${items} as donations. How many ${items} are available for the event?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate10(contexts) {
-        const name = randomChoice(contexts.names);
-        const season = randomChoice(contexts.seasons);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const activity = randomChoice(contexts.activities);
-        const maxNum = Math.min(this.config.maxNumber, 180);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 20;
-        const num2 = Math.floor(Math.random() * maxNum) + 14;
-
-        return {
-            question: `During ${season}, ${name} spent time ${activity} ${items}. On Monday they found ${num1} ${items}, and on Tuesday they found ${num2} more. How many ${items} did ${name} find in total?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate11(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 150);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 8;
-        const num2 = Math.floor(Math.random() * maxNum) + 10;
-        const num3 = Math.floor(Math.random() * maxNum) + 6;
-
-        return {
-            question: `Three friends are combining their collections. ${names[0]} has ${num1} ${items}, ${names[1]} has ${num2} ${items}, and ${names[2]} has ${num3} ${items}. What is the total number of ${items} when combined?`,
-            answer: num1 + num2 + num3
-        };
-    }
-
-    additionTemplate12(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const timeframe = randomChoice(contexts.timeframes);
-        const maxNum = Math.min(this.config.maxNumber, 140);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 25;
-        const num2 = Math.floor(Math.random() * maxNum) + 18;
-
-        return {
-            question: `The ${place} receives deliveries ${timeframe}. Last delivery had ${num1} ${items} and today's delivery has ${num2} ${items}. How many ${items} were delivered in these two shipments?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate13(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const event = randomChoice(contexts.events);
-        const maxNum = Math.min(this.config.maxNumber, 300);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 40;
-        const num2 = Math.floor(Math.random() * maxNum) + 35;
-        const num3 = Math.floor(Math.random() * maxNum) + 28;
-
-        return {
-            question: `For the ${event}, ${name} collected ${num1} ${items} on Friday, ${num2} ${items} on Saturday, and ${num3} ${items} on Sunday. What is the total number of ${items} collected over the three days?`,
-            answer: num1 + num2 + num3
-        };
-    }
-
-    additionTemplate14(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory1 = randomChoice(Object.keys(contexts.items));
-        const itemCategory2 = randomChoice(Object.keys(contexts.items));
-        const items1 = randomChoice(contexts.items[itemCategory1]);
-        const items2 = randomChoice(contexts.items[itemCategory2]);
-        const maxNum = Math.min(this.config.maxNumber, 160);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 22;
-        const num2 = Math.floor(Math.random() * maxNum) + 19;
-
-        return {
-            question: `${names[0]} collected ${num1} ${items1} and ${names[1]} collected ${num2} ${items2}. If they count all items together, how many items do they have in total?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate15(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const place = randomChoice(contexts.places);
-        const maxNum = Math.min(this.config.maxNumber, 220);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 45;
-        const num2 = Math.floor(Math.random() * maxNum) + 32;
-
-        return {
-            question: `${name}, a ${profession}, ordered supplies for the ${place}. The first shipment contained ${num1} ${items} and the second shipment had ${num2} ${items}. How many ${items} arrived in total?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate16(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const activity = randomChoice(contexts.activities);
-        const maxNum = Math.min(this.config.maxNumber, 190);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 28;
-        const num2 = Math.floor(Math.random() * maxNum) + 24;
-        const num3 = Math.floor(Math.random() * maxNum) + 16;
-        const num4 = Math.floor(Math.random() * maxNum) + 12;
-
-        return {
-            question: `While ${activity} ${items}, ${name} found ${num1} in the morning, ${num2} at noon, ${num3} in the afternoon, and ${num4} in the evening. What is the total number of ${items} found?`,
-            answer: num1 + num2 + num3 + num4
-        };
-    }
-
-    additionTemplate17(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const season = randomChoice(contexts.seasons);
-        const maxNum = Math.min(this.config.maxNumber, 170);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 35;
-        const num2 = Math.floor(Math.random() * maxNum) + 26;
-
-        return {
-            question: `At the ${place} during ${season}, ${name} counted ${num1} ${items} on display. Later, staff members added ${num2} more ${items} to the display. How many ${items} are on display now?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate18(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const event = randomChoice(contexts.events);
-        const maxNum = Math.min(this.config.maxNumber, 240);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 50;
-        const num2 = Math.floor(Math.random() * maxNum) + 42;
-
-        return {
-            question: `${names[0]} and ${names[1]} are preparing for a ${event}. ${names[0]} prepared ${num1} ${items} yesterday and ${names[1]} prepared ${num2} ${items} today. How many ${items} have been prepared so far?`,
-            answer: num1 + num2
-        };
-    }
-
-    additionTemplate19(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.addition);
-        const timeframe = randomChoice(contexts.timeframes);
-        const maxNum = Math.min(this.config.maxNumber, 130);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 18;
-        const num2 = Math.floor(Math.random() * maxNum) + 22;
-        const num3 = Math.floor(Math.random() * maxNum) + 15;
-
-        return {
-            question: `${name} ${action} ${items} ${timeframe}. In week one, they got ${num1} ${items}. In week two, they got ${num2} ${items}. In week three, they got ${num3} ${items}. What is the total for all three weeks?`,
-            answer: num1 + num2 + num3
-        };
-    }
-
-    additionTemplate20(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 210);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 38;
-        const num2 = Math.floor(Math.random() * maxNum) + 30;
-        const num3 = Math.floor(Math.random() * maxNum) + 25;
-
-        return {
-            question: `${name} works as a ${profession} at the ${place}. On Monday they processed ${num1} ${items}, on Wednesday they processed ${num2} ${items}, and on Friday they processed ${num3} ${items}. How many ${items} did they process in total?`,
-            answer: num1 + num2 + num3
-        };
-    }
-
-    // Subtraction word problem templates
-    generateSubtractionProblem(contexts) {
-        const templates = [
-            this.subtractionTemplate1,
-            this.subtractionTemplate2,
-            this.subtractionTemplate3,
-            this.subtractionTemplate4,
-            this.subtractionTemplate5,
-            this.subtractionTemplate6,
-            this.subtractionTemplate7,
-            this.subtractionTemplate8,
-            this.subtractionTemplate9,
-            this.subtractionTemplate10,
-            this.subtractionTemplate11,
-            this.subtractionTemplate12,
-            this.subtractionTemplate13,
-            this.subtractionTemplate14,
-            this.subtractionTemplate15,
-            this.subtractionTemplate16,
-            this.subtractionTemplate17,
-            this.subtractionTemplate18,
-            this.subtractionTemplate19,
-            this.subtractionTemplate20
-        ];
-
-        const template = templates[Math.floor(Math.random() * templates.length)];
-        return template.call(this, contexts);
-    }
-
-    subtractionTemplate1(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.subtraction);
-        const maxNum = Math.min(this.config.maxNumber, 500);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 50;
-        const num2 = Math.floor(Math.random() * (num1 - 10)) + 5;
-
-        return {
-            question: `${name} had a collection of ${num1} ${items}. During spring cleaning, they ${action} ${num2} of them. How many ${items} does ${name} have left?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate2(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.subtraction);
-        const maxNum = Math.min(this.config.maxNumber, 400);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 40;
-        const num2 = Math.floor(Math.random() * (num1 - 15)) + 8;
-
-        return {
-            question: `The ${place} started the day with ${num1} ${items} in stock. By closing time, customers had ${action} ${num2} ${items}. How many ${items} remained?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate3(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 300);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 60;
-        const num2 = Math.floor(Math.random() * (num1 - 20)) + 10;
-
-        return {
-            question: `${name}, a ${profession}, was managing ${num1} ${items} for a project. Due to budget cuts, they had to remove ${num2} ${items} from the project. How many ${items} are still part of the project?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate4(contexts) {
-        const name = randomChoice(contexts.names);
-        const place1 = randomChoice(contexts.places);
-        const place2 = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 250);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 80;
-        const num2 = Math.floor(Math.random() * (num1 - 30)) + 15;
-
-        return {
-            question: `${name} moved ${num1} ${items} from the ${place1} to the ${place2}. However, ${num2} ${items} were damaged during transport and had to be discarded. How many ${items} successfully reached the ${place2}?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate5(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 200);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 70;
-        const num2 = Math.floor(Math.random() * (num1 - 25)) + 12;
-
-        return {
-            question: `${names[0]} and ${names[1]} were sharing ${num1} ${items}. ${names[0]} took ${num2} ${items} for their personal use. How many ${items} were left for ${names[1]}?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate6(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const measurement = randomChoice(contexts.measurements);
-        const maxNum = Math.min(this.config.maxNumber, 180);
-
-        const total = Math.floor(Math.random() * maxNum) + 90;
-        const used = Math.floor(Math.random() * (total - 35)) + 18;
-
-        return {
-            question: `${name} started with ${total} ${measurement} of ${items}. During the week, they used ${used} ${measurement} for various projects. How many ${measurement} of ${items} do they have remaining?`,
-            answer: total - used
-        };
-    }
-
-    subtractionTemplate7(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action1 = randomChoice(contexts.actions.subtraction);
-        const action2 = randomChoice(contexts.actions.subtraction);
-        const maxNum = Math.min(this.config.maxNumber, 150);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 100;
-        const num2 = Math.floor(Math.random() * 40) + 20;
-        const num3 = Math.floor(Math.random() * 30) + 15;
-
-        return {
-            question: `${name} began the month with ${num1} ${items}. In the first week, they ${action1} ${num2} ${items}. In the second week, they ${action2} ${num3} more ${items}. How many ${items} does ${name} have left?`,
-            answer: num1 - num2 - num3
-        };
-    }
-
-    subtractionTemplate8(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const timeframe = randomChoice(contexts.timeframes);
-        const maxNum = Math.min(this.config.maxNumber, 220);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 65;
-        const num2 = Math.floor(Math.random() * (num1 - 30)) + 20;
-
-        return {
-            question: `At the ${place}, ${name} was responsible for maintaining ${num1} ${items} ${timeframe}. Due to wear and tear, ${num2} ${items} needed to be replaced and removed. How many original ${items} are still in use?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate9(contexts) {
-        const name = randomChoice(contexts.names);
-        const event = randomChoice(contexts.events);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.subtraction);
-        const maxNum = Math.min(this.config.maxNumber, 280);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 75;
-        const num2 = Math.floor(Math.random() * (num1 - 25)) + 18;
-
-        return {
-            question: `${name} prepared ${num1} ${items} for the ${event}. After ${action} ${num2} ${items}, how many ${items} remained?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate10(contexts) {
-        const name = randomChoice(contexts.names);
-        const season = randomChoice(contexts.seasons);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const activity = randomChoice(contexts.activities);
-        const maxNum = Math.min(this.config.maxNumber, 240);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 85;
-        const num2 = Math.floor(Math.random() * (num1 - 35)) + 22;
-
-        return {
-            question: `During ${season}, ${name} was ${activity} ${num1} ${items}. They removed ${num2} ${items} that were no longer needed. How many ${items} are left?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate11(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.subtraction);
-        const maxNum = Math.min(this.config.maxNumber, 320);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 120;
-        const num2 = Math.floor(Math.random() * (num1 - 45)) + 28;
-
-        return {
-            question: `${names[0]} and ${names[1]} had ${num1} ${items} together. ${names[0]} ${action} ${num2} ${items}. How many ${items} do they have now?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate12(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 260);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 95;
-        const num2 = Math.floor(Math.random() * (num1 - 40)) + 30;
-
-        return {
-            question: `${name}, a ${profession} at the ${place}, managed an inventory of ${num1} ${items}. After shipping out ${num2} ${items} to customers, how many ${items} remained in inventory?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate13(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const event = randomChoice(contexts.events);
-        const action1 = randomChoice(contexts.actions.subtraction);
-        const action2 = randomChoice(contexts.actions.subtraction);
-        const maxNum = Math.min(this.config.maxNumber, 350);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 140;
-        const num2 = Math.floor(Math.random() * 45) + 25;
-        const num3 = Math.floor(Math.random() * 35) + 20;
-
-        return {
-            question: `For the ${event}, ${name} started with ${num1} ${items}. They ${action1} ${num2} ${items} on the first day and ${action2} ${num3} ${items} on the second day. How many ${items} are left?`,
-            answer: num1 - num2 - num3
-        };
-    }
-
-    subtractionTemplate14(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const timeframe = randomChoice(contexts.timeframes);
-        const maxNum = Math.min(this.config.maxNumber, 290);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 110;
-        const num2 = Math.floor(Math.random() * (num1 - 50)) + 35;
-
-        return {
-            question: `The ${place} stocks ${num1} ${items} ${timeframe}. If ${num2} ${items} were sold today, how many ${items} remain in stock?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate15(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 200);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 90;
-        const num2 = Math.floor(Math.random() * 35) + 15;
-        const num3 = Math.floor(Math.random() * 30) + 12;
-
-        return {
-            question: `${names[0]}, ${names[1]}, and ${names[2]} started with ${num1} ${items}. ${names[0]} took ${num2} ${items} and ${names[1]} took ${num3} ${items}. How many ${items} does ${names[2]} have left?`,
-            answer: num1 - num2 - num3
-        };
-    }
-
-    subtractionTemplate16(contexts) {
-        const name = randomChoice(contexts.names);
-        const activity = randomChoice(contexts.activities);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.subtraction);
-        const maxNum = Math.min(this.config.maxNumber, 270);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 105;
-        const num2 = Math.floor(Math.random() * (num1 - 48)) + 32;
-
-        return {
-            question: `While ${activity} ${items}, ${name} had ${num1} ${items} total. They ${action} ${num2} ${items} during the process. How many ${items} remain?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate17(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const event = randomChoice(contexts.events);
-        const maxNum = Math.min(this.config.maxNumber, 310);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 125;
-        const num2 = Math.floor(Math.random() * (num1 - 55)) + 38;
-
-        return {
-            question: `${name}, working as a ${profession}, allocated ${num1} ${items} for the ${event}. After using ${num2} ${items}, how many ${items} were left unused?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate18(contexts) {
-        const name = randomChoice(contexts.names);
-        const place1 = randomChoice(contexts.places);
-        const place2 = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(this.config.maxNumber, 340);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 135;
-        const num2 = Math.floor(Math.random() * (num1 - 60)) + 42;
-
-        return {
-            question: `${name} transferred ${num1} ${items} from the ${place1} to the ${place2}. During inspection, ${num2} ${items} were found to be defective and discarded. How many ${items} remained?`,
-            answer: num1 - num2
-        };
-    }
-
-    subtractionTemplate19(contexts) {
-        const name = randomChoice(contexts.names);
-        const season = randomChoice(contexts.seasons);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.subtraction);
-        const maxNum = Math.min(this.config.maxNumber, 230);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 100;
-        const num2 = Math.floor(Math.random() * 25) + 16;
-        const num3 = Math.floor(Math.random() * 22) + 14;
-        const num4 = Math.floor(Math.random() * 20) + 10;
-
-        return {
-            question: `During ${season}, ${name} collected ${num1} ${items}. In week 1 they ${action} ${num2} ${items}, in week 2 they removed ${num3} ${items}, and in week 3 they removed ${num4} ${items}. How many ${items} are left?`,
-            answer: num1 - num2 - num3 - num4
-        };
-    }
-
-    subtractionTemplate20(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const activity = randomChoice(contexts.activities);
-        const maxNum = Math.min(this.config.maxNumber, 380);
-
-        const num1 = Math.floor(Math.random() * maxNum) + 150;
-        const num2 = Math.floor(Math.random() * (num1 - 70)) + 48;
-
-        return {
-            question: `At the ${place}, ${name} was ${activity} ${num1} ${items}. After completing the task, ${num2} ${items} had been processed. How many ${items} still need to be processed?`,
-            answer: num1 - num2
-        };
-    }
-
-    // Multiplication word problem templates
-    generateMultiplicationProblem(contexts) {
-        const templates = [
-            this.multiplicationTemplate1,
-            this.multiplicationTemplate2,
-            this.multiplicationTemplate3,
-            this.multiplicationTemplate4,
-            this.multiplicationTemplate5,
-            this.multiplicationTemplate6,
-            this.multiplicationTemplate7,
-            this.multiplicationTemplate8,
-            this.multiplicationTemplate9,
-            this.multiplicationTemplate10,
-            this.multiplicationTemplate11,
-            this.multiplicationTemplate12,
-            this.multiplicationTemplate13,
-            this.multiplicationTemplate14,
-            this.multiplicationTemplate15,
-            this.multiplicationTemplate16,
-            this.multiplicationTemplate17,
-            this.multiplicationTemplate18,
-            this.multiplicationTemplate19,
-            this.multiplicationTemplate20
-        ];
-
-        const template = templates[Math.floor(Math.random() * templates.length)];
-        return template.call(this, contexts);
-    }
-
-    multiplicationTemplate1(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 50);
-
-        const groups = Math.floor(Math.random() * maxNum) + 3;
-        const perGroup = Math.floor(Math.random() * maxNum) + 2;
-
-        return {
-            question: `${name} is organizing ${items} for an event. They create ${groups} equal groups, with ${perGroup} ${items} in each group. How many ${items} are there in total?`,
-            answer: groups * perGroup
-        };
-    }
-
-    multiplicationTemplate2(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const timeframe = randomChoice(contexts.timeframes);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 40);
-
-        const rate = Math.floor(Math.random() * maxNum) + 4;
-        const time = Math.floor(Math.random() * maxNum) + 3;
-
-        return {
-            question: `${name} works as a ${profession} and produces ${rate} ${items} ${timeframe}. If they work for ${time} time periods, how many ${items} will they produce?`,
-            answer: rate * time
-        };
-    }
-
-    multiplicationTemplate3(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 35);
-
-        const rows = Math.floor(Math.random() * maxNum) + 4;
-        const cols = Math.floor(Math.random() * maxNum) + 3;
-
-        return {
-            question: `At the ${place}, ${name} arranged ${items} in a rectangular pattern with ${rows} rows and ${cols} columns. How many ${items} are there in total?`,
-            answer: rows * cols
-        };
-    }
-
-    multiplicationTemplate4(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const containers = ["boxes", "bags", "containers", "packages", "crates", "baskets"];
-        const container = randomChoice(containers);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 45);
-
-        const numContainers = Math.floor(Math.random() * maxNum) + 3;
-        const itemsPerContainer = Math.floor(Math.random() * maxNum) + 2;
-
-        return {
-            question: `${name} packed ${items} into ${container}. Each ${container.slice(0, -1)} contains exactly ${itemsPerContainer} ${items}. If there are ${numContainers} ${container}, how many ${items} are there altogether?`,
-            answer: numContainers * itemsPerContainer
-        };
-    }
-
-    multiplicationTemplate5(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 30);
-
-        const person1Amount = Math.floor(Math.random() * maxNum) + 5;
-        const multiplier = Math.floor(Math.random() * 8) + 2;
-
-        return {
-            question: `${names[0]} has ${person1Amount} ${items}. ${names[1]} has ${multiplier} times as many ${items} as ${names[0]}. How many ${items} does ${names[1]} have?`,
-            answer: person1Amount * multiplier
-        };
-    }
-
-    multiplicationTemplate6(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const measurement = randomChoice(contexts.measurements);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 25);
-
-        const length = Math.floor(Math.random() * maxNum) + 6;
-        const width = Math.floor(Math.random() * maxNum) + 4;
-
-        return {
-            question: `${name} is creating a display area that measures ${length} ${measurement} by ${width} ${measurement}. If they place one ${items.slice(0, -1)} per square ${measurement}, how many ${items} will fit in the display?`,
-            answer: length * width
-        };
-    }
-
-    multiplicationTemplate7(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 38);
-
-        const floors = Math.floor(Math.random() * 6) + 3;
-        const itemsPerFloor = Math.floor(Math.random() * maxNum) + 5;
-
-        return {
-            question: `The ${place} has ${floors} floors. ${name} counted ${itemsPerFloor} ${items} on each floor. What is the total number of ${items} in the entire ${place}?`,
-            answer: floors * itemsPerFloor
-        };
-    }
-
-    multiplicationTemplate8(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const events = ["weeks", "months", "sessions", "classes", "meetings", "workshops"];
-        const event = randomChoice(events);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 20);
-
-        const perEvent = Math.floor(Math.random() * maxNum) + 7;
-        const numEvents = Math.floor(Math.random() * 12) + 4;
-
-        return {
-            question: `${name} collects ${perEvent} ${items} during each ${event.slice(0, -1)}. Over the course of ${numEvents} ${event}, how many ${items} will ${name} collect in total?`,
-            answer: perEvent * numEvents
-        };
-    }
-
-    multiplicationTemplate9(contexts) {
-        const name = randomChoice(contexts.names);
-        const event = randomChoice(contexts.events);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 25);
-
-        const perSet = Math.floor(Math.random() * maxNum) + 5;
-        const numSets = Math.floor(Math.random() * 15) + 3;
-
-        return {
-            question: `For the ${event}, ${name} is preparing sets of ${items}. Each set contains ${perSet} ${items} and they need ${numSets} sets. How many ${items} are needed in total?`,
-            answer: perSet * numSets
-        };
-    }
-
-    multiplicationTemplate10(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 22);
-
-        const perDay = Math.floor(Math.random() * maxNum) + 6;
-        const numDays = Math.floor(Math.random() * 10) + 5;
-
-        return {
-            question: `${name} works as a ${profession} at the ${place}. They process ${perDay} ${items} each day. How many ${items} will they process in ${numDays} days?`,
-            answer: perDay * numDays
-        };
-    }
-
-    multiplicationTemplate11(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const activity = randomChoice(contexts.activities);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 18);
-
-        const perPerson = Math.floor(Math.random() * maxNum) + 8;
-
-        return {
-            question: `${names[0]} and ${names[1]} are ${activity} ${items}. If each person handles ${perPerson} ${items}, how many ${items} are they handling together?`,
-            answer: perPerson * 2
-        };
-    }
-
-    multiplicationTemplate12(contexts) {
-        const name = randomChoice(contexts.names);
-        const season = randomChoice(contexts.seasons);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const timeframe = randomChoice(contexts.timeframes);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 20);
-
-        const perTime = Math.floor(Math.random() * maxNum) + 4;
-        const numTimes = Math.floor(Math.random() * 16) + 6;
-
-        return {
-            question: `During ${season}, ${name} collects ${perTime} ${items} ${timeframe}. Over ${numTimes} time periods, how many ${items} will ${name} have collected?`,
-            answer: perTime * numTimes
-        };
-    }
-
-    multiplicationTemplate13(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 24);
-
-        const perShelf = Math.floor(Math.random() * maxNum) + 10;
-        const numShelves = Math.floor(Math.random() * 12) + 4;
-
-        return {
-            question: `At the ${place}, ${name} is organizing ${items}. Each shelf holds ${perShelf} ${items} and there are ${numShelves} shelves. What is the total capacity for ${items}?`,
-            answer: perShelf * numShelves
-        };
-    }
-
-    multiplicationTemplate14(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.multiplication);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 19);
-
-        const perBox = Math.floor(Math.random() * maxNum) + 7;
-        const numBoxes = Math.floor(Math.random() * 14) + 5;
-
-        return {
-            question: `${name} is ${action} ${items}. Each box contains ${perBox} ${items}, and there are ${numBoxes} boxes. How many ${items} are there in all?`,
-            answer: perBox * numBoxes
-        };
-    }
-
-    multiplicationTemplate15(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const event = randomChoice(contexts.events);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 17);
-
-        const perPerson = Math.floor(Math.random() * maxNum) + 9;
-
-        return {
-            question: `Three people are contributing to the ${event}. ${names[0]}, ${names[1]}, and ${names[2]} each brought ${perPerson} ${items}. How many ${items} are there in total?`,
-            answer: perPerson * 3
-        };
-    }
-
-    multiplicationTemplate16(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 26);
-
-        const perBatch = Math.floor(Math.random() * maxNum) + 12;
-        const numBatches = Math.floor(Math.random() * 8) + 3;
-
-        return {
-            question: `${name}, a ${profession}, produces ${items} in batches. Each batch contains ${perBatch} ${items}. If ${name} completes ${numBatches} batches, how many ${items} are produced?`,
-            answer: perBatch * numBatches
-        };
-    }
-
-    multiplicationTemplate17(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const activity = randomChoice(contexts.activities);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 21);
-
-        const perRow = Math.floor(Math.random() * maxNum) + 8;
-        const numRows = Math.floor(Math.random() * 11) + 4;
-
-        return {
-            question: `At the ${place}, ${name} is ${activity} ${items} in rows. Each row has ${perRow} ${items}. With ${numRows} rows, how many ${items} are there in total?`,
-            answer: perRow * numRows
-        };
-    }
-
-    multiplicationTemplate18(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const season = randomChoice(contexts.seasons);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 23);
-
-        const perWeek = Math.floor(Math.random() * maxNum) + 11;
-        const numWeeks = Math.floor(Math.random() * 9) + 4;
-
-        return {
-            question: `During ${season}, ${name} creates ${perWeek} ${items} per week. Over ${numWeeks} weeks, how many ${items} will ${name} create?`,
-            answer: perWeek * numWeeks
-        };
-    }
-
-    multiplicationTemplate19(contexts) {
-        const name = randomChoice(contexts.names);
-        const event = randomChoice(contexts.events);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const place = randomChoice(contexts.places);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 16);
-
-        const perTable = Math.floor(Math.random() * maxNum) + 6;
-        const numTables = Math.floor(Math.random() * 13) + 5;
-
-        return {
-            question: `For the ${event} at the ${place}, ${name} is setting up tables. Each table needs ${perTable} ${items}. With ${numTables} tables, how many ${items} are needed?`,
-            answer: perTable * numTables
-        };
-    }
-
-    multiplicationTemplate20(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names), randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const activity = randomChoice(contexts.activities);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 15);
-
-        const perPerson = Math.floor(Math.random() * maxNum) + 8;
-
-        return {
-            question: `Four people are ${activity} ${items}. ${names[0]}, ${names[1]}, ${names[2]}, and ${names[3]} each handle ${perPerson} ${items}. What is the total number of ${items}?`,
-            answer: perPerson * 4
-        };
-    }
-
-    // Division word problem templates
-    generateDivisionProblem(contexts) {
-        const templates = [
-            this.divisionTemplate1,
-            this.divisionTemplate2,
-            this.divisionTemplate3,
-            this.divisionTemplate4,
-            this.divisionTemplate5,
-            this.divisionTemplate6,
-            this.divisionTemplate7,
-            this.divisionTemplate8,
-            this.divisionTemplate9,
-            this.divisionTemplate10,
-            this.divisionTemplate11,
-            this.divisionTemplate12,
-            this.divisionTemplate13,
-            this.divisionTemplate14,
-            this.divisionTemplate15,
-            this.divisionTemplate16,
-            this.divisionTemplate17,
-            this.divisionTemplate18,
-            this.divisionTemplate19,
-            this.divisionTemplate20
-        ];
-
-        const template = templates[Math.floor(Math.random() * templates.length)];
-        return template.call(this, contexts);
-    }
-
-    divisionTemplate1(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.division);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 30);
-
-        const groups = Math.floor(Math.random() * maxNum) + 3;
-        const perGroup = Math.floor(Math.random() * maxNum) + 2;
-        const total = groups * perGroup;
-
-        return {
-            question: `${name} has ${total} ${items} that need to be ${action} ${groups} groups. How many ${items} will be in each group?`,
-            answer: perGroup
-        };
-    }
-
-    divisionTemplate2(contexts) {
-        const name = randomChoice(contexts.names);
-        const people = ["friends", "students", "colleagues", "family members", "teammates", "participants"];
-        const group = randomChoice(people);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 25);
-
-        const numPeople = Math.floor(Math.random() * maxNum) + 4;
-        const perPerson = Math.floor(Math.random() * maxNum) + 3;
-        const total = numPeople * perPerson;
-
-        return {
-            question: `${name} wants to share ${total} ${items} equally among ${numPeople} ${group}. How many ${items} will each person receive?`,
-            answer: perPerson
-        };
-    }
-
-    divisionTemplate3(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const containers = ["boxes", "bags", "containers", "packages", "sets"];
-        const container = randomChoice(containers);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 20);
-
-        const perContainer = Math.floor(Math.random() * maxNum) + 5;
-        const numContainers = Math.floor(Math.random() * maxNum) + 3;
-        const total = perContainer * numContainers;
-
-        return {
-            question: `${name}, a ${profession}, has ${total} ${items} to pack into ${container}. If each ${container.slice(0, -1)} should contain the same number of ${items}, and there are ${numContainers} ${container}, how many ${items} go in each ${container.slice(0, -1)}?`,
-            answer: perContainer
-        };
-    }
-
-    divisionTemplate4(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const areas = ["sections", "departments", "zones", "areas", "wings", "rooms"];
-        const area = randomChoice(areas);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 22);
-
-        const numAreas = Math.floor(Math.random() * maxNum) + 4;
-        const perArea = Math.floor(Math.random() * maxNum) + 6;
-        const total = numAreas * perArea;
-
-        return {
-            question: `The ${place} has ${total} ${items} distributed across ${numAreas} different ${area}. If each ${area.slice(0, -1)} has an equal number of ${items}, how many ${items} are in each ${area.slice(0, -1)}?`,
-            answer: perArea
-        };
-    }
-
-    divisionTemplate5(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const timeframes = ["days", "weeks", "months", "sessions", "periods"];
-        const timeframe = randomChoice(timeframes);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 18);
-
-        const numPeriods = Math.floor(Math.random() * maxNum) + 5;
-        const perPeriod = Math.floor(Math.random() * maxNum) + 4;
-        const total = numPeriods * perPeriod;
-
-        return {
-            question: `${name} produced ${total} ${items} over ${numPeriods} ${timeframes}. If the production was consistent each ${timeframe.slice(0, -1)}, how many ${items} were produced per ${timeframe.slice(0, -1)}?`,
-            answer: perPeriod
-        };
-    }
-
-    divisionTemplate6(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const measurement = randomChoice(contexts.measurements);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 15);
-
-        const length = Math.floor(Math.random() * maxNum) + 8;
-        const segments = Math.floor(Math.random() * 8) + 3;
-        const total = length * segments;
-
-        return {
-            question: `${name} has ${total} ${measurement} of ${items} to cut into ${segments} equal pieces. How many ${measurement} long will each piece be?`,
-            answer: length
-        };
-    }
-
-    divisionTemplate7(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 16);
-
-        const perPerson = Math.floor(Math.random() * maxNum) + 7;
-        const total = perPerson * 3;
-
-        return {
-            question: `${names[0]}, ${names[1]}, and ${names[2]} collected ${total} ${items} together. If they split the ${items} equally among themselves, how many ${items} will each person get?`,
-            answer: perPerson
-        };
-    }
-
-    divisionTemplate8(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const vehicles = ["trucks", "vans", "cars", "buses", "trailers"];
-        const vehicle = randomChoice(vehicles);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 14);
-
-        const numVehicles = Math.floor(Math.random() * maxNum) + 4;
-        const perVehicle = Math.floor(Math.random() * maxNum) + 8;
-        const total = numVehicles * perVehicle;
-
-        return {
-            question: `${name} needs to transport ${total} ${items} from the ${place} using ${numVehicles} ${vehicle}. If each ${vehicle.slice(0, -1)} carries the same amount, how many ${items} will be in each ${vehicle.slice(0, -1)}?`,
-            answer: perVehicle
-        };
-    }
-
-    divisionTemplate9(contexts) {
-        const name = randomChoice(contexts.names);
-        const event = randomChoice(contexts.events);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.division);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 16);
-
-        const numGroups = Math.floor(Math.random() * maxNum) + 5;
-        const perGroup = Math.floor(Math.random() * maxNum) + 6;
-        const total = numGroups * perGroup;
-
-        return {
-            question: `For the ${event}, ${name} needs to ${action} ${total} ${items} equally among ${numGroups} groups. How many ${items} will each group receive?`,
-            answer: perGroup
-        };
-    }
-
-    divisionTemplate10(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const place = randomChoice(contexts.places);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 18);
-
-        const numDays = Math.floor(Math.random() * maxNum) + 4;
-        const perDay = Math.floor(Math.random() * maxNum) + 7;
-        const total = numDays * perDay;
-
-        return {
-            question: `${name}, a ${profession} at the ${place}, completed ${total} ${items} over ${numDays} days. If the same number was completed each day, how many ${items} were completed daily?`,
-            answer: perDay
-        };
-    }
-
-    divisionTemplate11(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const activity = randomChoice(contexts.activities);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 15);
-
-        const numPeople = 2;
-        const perPerson = Math.floor(Math.random() * maxNum) + 8;
-        const total = numPeople * perPerson;
-
-        return {
-            question: `${names[0]} and ${names[1]} are ${activity} ${total} ${items}. If they share the ${items} equally, how many will each person get?`,
-            answer: perPerson
-        };
-    }
-
-    divisionTemplate12(contexts) {
-        const name = randomChoice(contexts.names);
-        const season = randomChoice(contexts.seasons);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 17);
-
-        const numWeeks = Math.floor(Math.random() * maxNum) + 6;
-        const perWeek = Math.floor(Math.random() * maxNum) + 5;
-        const total = numWeeks * perWeek;
-
-        return {
-            question: `During ${season}, ${name} collected ${total} ${items} over ${numWeeks} weeks. If they collected the same amount each week, how many ${items} were collected per week?`,
-            answer: perWeek
-        };
-    }
-
-    divisionTemplate13(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const action = randomChoice(contexts.actions.division);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 19);
-
-        const numShelves = Math.floor(Math.random() * maxNum) + 6;
-        const perShelf = Math.floor(Math.random() * maxNum) + 9;
-        const total = numShelves * perShelf;
-
-        return {
-            question: `At the ${place}, ${name} needs to ${action} ${total} ${items} across ${numShelves} shelves. How many ${items} should go on each shelf?`,
-            answer: perShelf
-        };
-    }
-
-    divisionTemplate14(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const event = randomChoice(contexts.events);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 20);
-
-        const numBoxes = Math.floor(Math.random() * maxNum) + 5;
-        const perBox = Math.floor(Math.random() * maxNum) + 7;
-        const total = numBoxes * perBox;
-
-        return {
-            question: `${name} is organizing ${items} for the ${event}. They have ${total} ${items} to pack into ${numBoxes} boxes equally. How many ${items} will each box contain?`,
-            answer: perBox
-        };
-    }
-
-    divisionTemplate15(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 13);
-
-        const numPeople = 3;
-        const perPerson = Math.floor(Math.random() * maxNum) + 8;
-        const total = numPeople * perPerson;
-
-        return {
-            question: `${names[0]}, ${names[1]}, and ${names[2]} need to divide ${total} ${items} equally among themselves. How many ${items} will each person receive?`,
-            answer: perPerson
-        };
-    }
-
-    divisionTemplate16(contexts) {
-        const name = randomChoice(contexts.names);
-        const profession = randomChoice(contexts.professions);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const activity = randomChoice(contexts.activities);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 21);
-
-        const numBatches = Math.floor(Math.random() * maxNum) + 4;
-        const perBatch = Math.floor(Math.random() * maxNum) + 10;
-        const total = numBatches * perBatch;
-
-        return {
-            question: `${name}, a ${profession}, is ${activity} ${total} ${items}. If these are divided into ${numBatches} equal batches, how many ${items} are in each batch?`,
-            answer: perBatch
-        };
-    }
-
-    divisionTemplate17(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const timeframe = randomChoice(contexts.timeframes);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 22);
-
-        const numPeriods = Math.floor(Math.random() * maxNum) + 7;
-        const perPeriod = Math.floor(Math.random() * maxNum) + 6;
-        const total = numPeriods * perPeriod;
-
-        return {
-            question: `The ${place} distributed ${total} ${items} ${timeframe} over ${numPeriods} time periods. How many ${items} were distributed per period?`,
-            answer: perPeriod
-        };
-    }
-
-    divisionTemplate18(contexts) {
-        const name = randomChoice(contexts.names);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const season = randomChoice(contexts.seasons);
-        const action = randomChoice(contexts.actions.division);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 23);
-
-        const numContainers = Math.floor(Math.random() * maxNum) + 5;
-        const perContainer = Math.floor(Math.random() * maxNum) + 8;
-        const total = numContainers * perContainer;
-
-        return {
-            question: `During ${season}, ${name} needs to ${action} ${total} ${items} into ${numContainers} containers. How many ${items} should each container hold?`,
-            answer: perContainer
-        };
-    }
-
-    divisionTemplate19(contexts) {
-        const names = [randomChoice(contexts.names), randomChoice(contexts.names), randomChoice(contexts.names), randomChoice(contexts.names)];
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const event = randomChoice(contexts.events);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 12);
-
-        const numPeople = 4;
-        const perPerson = Math.floor(Math.random() * maxNum) + 9;
-        const total = numPeople * perPerson;
-
-        return {
-            question: `At the ${event}, ${names[0]}, ${names[1]}, ${names[2]}, and ${names[3]} are sharing ${total} ${items} equally. How many ${items} does each person get?`,
-            answer: perPerson
-        };
-    }
-
-    divisionTemplate20(contexts) {
-        const name = randomChoice(contexts.names);
-        const place = randomChoice(contexts.places);
-        const itemCategory = randomChoice(Object.keys(contexts.items));
-        const items = randomChoice(contexts.items[itemCategory]);
-        const activity = randomChoice(contexts.activities);
-        const maxNum = Math.min(Math.sqrt(this.config.maxNumber), 24);
-
-        const numRows = Math.floor(Math.random() * maxNum) + 6;
-        const perRow = Math.floor(Math.random() * maxNum) + 7;
-        const total = numRows * perRow;
-
-        return {
-            question: `At the ${place}, ${name} is ${activity} ${total} ${items} in ${numRows} equal rows. How many ${items} will be in each row?`,
-            answer: perRow
-        };
+        const templates = WORD_PROBLEM_TEMPLATES[operation]
+            || WORD_PROBLEM_TEMPLATES[randomChoice(Object.keys(WORD_PROBLEM_TEMPLATES))];
+        return randomChoice(templates)(CONTEXTUAL_DATA, this.config);
     }
 
     // Advanced problem types
@@ -5011,341 +3715,6 @@ export class ProblemGenerator {
         this.generationCache.clear();
     }
 
-    // ==========================================
-    // GRADE-SPECIFIC ARITHMETIC GENERATORS
-    // Each grade has completely unique questions
-    // ==========================================
-
-    generateGrade1Arithmetic(operation) {
-        const problems = {
-            addition: [
-                () => { const a = Math.floor(Math.random() * 5) + 1; const b = Math.floor(Math.random() * 5) + 1; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const a = Math.floor(Math.random() * 10) + 1; return { question: `${a} + 1 = `, answer: a + 1 }; },
-                () => { const a = Math.floor(Math.random() * 8) + 2; return { question: `${a} + 2 = `, answer: a + 2 }; },
-                () => { const total = Math.floor(Math.random() * 10) + 3; const b = Math.floor(Math.random() * (total - 1)) + 1; return { question: `__ + ${b} = ${total}`, answer: total - b }; },
-                () => { const a = Math.floor(Math.random() * 5) + 1; const b = Math.floor(Math.random() * 5) + 1; const c = Math.floor(Math.random() * 3) + 1; return { question: `${a} + ${b} + ${c} = `, answer: a + b + c }; },
-                () => { const a = 10; const b = Math.floor(Math.random() * 5) + 1; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const a = Math.floor(Math.random() * 7) + 3; const b = Math.floor(Math.random() * 5) + 1; return { question: `${a} + ${b} = `, answer: a + b }; },
-            ],
-            subtraction: [
-                () => { const a = Math.floor(Math.random() * 8) + 3; const b = Math.floor(Math.random() * a) + 1; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = 10; const b = Math.floor(Math.random() * 9) + 1; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 5) + 6; const b = Math.floor(Math.random() * 3) + 1; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const answer = Math.floor(Math.random() * 5) + 1; const b = Math.floor(Math.random() * 5) + 1; const a = answer + b; return { question: `${a} - __ = ${answer}`, answer: b }; },
-                () => { const a = Math.floor(Math.random() * 10) + 5; return { question: `${a} - 0 = `, answer: a }; },
-                () => { const a = Math.floor(Math.random() * 8) + 2; return { question: `${a} - ${a} = `, answer: 0 }; },
-                () => { const a = Math.floor(Math.random() * 10) + 10; const b = Math.floor(Math.random() * 5) + 1; return { question: `${a} - ${b} = `, answer: a - b }; },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    generateGrade2Arithmetic(operation) {
-        const problems = {
-            addition: [
-                () => { const a = Math.floor(Math.random() * 30) + 10; const b = Math.floor(Math.random() * 30) + 10; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const a = Math.floor(Math.random() * 40) + 10; const b = Math.floor(Math.random() * 10) + 1; return { question: `${a} + ${b} (add ones) = `, answer: a + b }; },
-                () => { const a = Math.floor(Math.random() * 40) + 10; const b = 10; return { question: `${a} + ${b} (add tens) = `, answer: a + b }; },
-                () => { const total = Math.floor(Math.random() * 60) + 20; const b = Math.floor(Math.random() * 30) + 5; return { question: `__ + ${b} = ${total}`, answer: total - b }; },
-                () => { const a = Math.floor(Math.random() * 20) + 15; const b = Math.floor(Math.random() * 20) + 15; const c = Math.floor(Math.random() * 10) + 5; return { question: `${a} + ${b} + ${c} = `, answer: a + b + c }; },
-                () => { const a = Math.floor(Math.random() * 45) + 5; const b = Math.floor(Math.random() * 45) + 5; return { question: `${a} + ${b} (regroup) = `, answer: a + b }; },
-                () => { const tens = Math.floor(Math.random() * 4) + 2; const a = tens * 10; const b = Math.floor(Math.random() * 9) + 1; return { question: `${a} + ${b} = `, answer: a + b }; },
-            ],
-            subtraction: [
-                () => { const a = Math.floor(Math.random() * 50) + 20; const b = Math.floor(Math.random() * 30) + 5; if (b >= a) return this.generateGrade2Arithmetic('subtraction'); return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 40) + 30; const b = Math.floor(Math.random() * 9) + 1; return { question: `${a} - ${b} (subtract ones) = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 70) + 30; const b = 10; return { question: `${a} - ${b} (subtract tens) = `, answer: a - b }; },
-                () => { const answer = Math.floor(Math.random() * 30) + 10; const b = Math.floor(Math.random() * 20) + 5; const a = answer + b; return { question: `${a} - __ = ${answer}`, answer: b }; },
-                () => { const a = Math.floor(Math.random() * 60) + 40; const b = Math.floor(Math.random() * 30) + 10; if (b >= a) return this.generateGrade2Arithmetic('subtraction'); return { question: `${a} - ${b} (regroup) = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 80) + 20; const b = Math.floor(Math.random() * (a - 10)) + 5; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 50) + 25; const b = a - 10; return { question: `${a} - ${b} = `, answer: 10 }; },
-            ],
-            multiplication: [
-                () => { const a = Math.floor(Math.random() * 5) + 1; return { question: `${a} × 2 = `, answer: a * 2 }; },
-                () => { const a = Math.floor(Math.random() * 10) + 1; return { question: `${a} × 5 = `, answer: a * 5 }; },
-                () => { const a = Math.floor(Math.random() * 10) + 1; return { question: `${a} × 10 = `, answer: a * 10 }; },
-                () => { const groups = Math.floor(Math.random() * 5) + 2; const each = Math.floor(Math.random() * 5) + 2; return { question: `${groups} groups of ${each} = `, answer: groups * each }; },
-                () => { const a = Math.floor(Math.random() * 5) + 1; return { question: `Skip count by 2s: ${a} times = `, answer: a * 2 }; },
-                () => { const a = Math.floor(Math.random() * 5) + 1; return { question: `Double ${a} = `, answer: a * 2 }; },
-                () => { const a = Math.floor(Math.random() * 12) + 1; return { question: `${a} × 1 = `, answer: a }; },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    generateGrade3Arithmetic(operation) {
-        const problems = {
-            addition: [
-                () => { const a = Math.floor(Math.random() * 400) + 100; const b = Math.floor(Math.random() * 400) + 100; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const a = Math.floor(Math.random() * 500) + 100; const b = Math.floor(Math.random() * 99) + 1; return { question: `${a} + ${b} (add to hundreds) = `, answer: a + b }; },
-                () => { const a = Math.floor(Math.random() * 700) + 100; const b = Math.floor(Math.random() * 200) + 50; return { question: `${a} + ${b} (mental math) = `, answer: a + b }; },
-                () => { const total = Math.floor(Math.random() * 800) + 200; const b = Math.floor(Math.random() * 300) + 100; return { question: `__ + ${b} = ${total}`, answer: total - b }; },
-                () => { const a = Math.floor(Math.random() * 300) + 100; const b = Math.floor(Math.random() * 300) + 100; const c = Math.floor(Math.random() * 200) + 50; return { question: `${a} + ${b} + ${c} = `, answer: a + b + c }; },
-                () => { const a = Math.floor(Math.random() * 650) + 150; const b = Math.floor(Math.random() * 350) + 150; return { question: `${a} + ${b} (regroup hundreds) = `, answer: a + b }; },
-                () => { const a = (Math.floor(Math.random() * 9) + 1) * 100; const b = Math.floor(Math.random() * 99) + 1; return { question: `${a} + ${b} = `, answer: a + b }; },
-            ],
-            subtraction: [
-                () => { const a = Math.floor(Math.random() * 700) + 300; const b = Math.floor(Math.random() * 400) + 100; if (b >= a) return this.generateGrade3Arithmetic('subtraction'); return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 600) + 400; const b = Math.floor(Math.random() * 99) + 1; return { question: `${a} - ${b} (subtract from hundreds) = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 800) + 200; const b = 100; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const answer = Math.floor(Math.random() * 400) + 100; const b = Math.floor(Math.random() * 300) + 100; const a = answer + b; return { question: `${a} - __ = ${answer}`, answer: b }; },
-                () => { const a = Math.floor(Math.random() * 600) + 400; const b = Math.floor(Math.random() * 300) + 150; if (b >= a) return this.generateGrade3Arithmetic('subtraction'); return { question: `${a} - ${b} (regroup) = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 900) + 100; const b = Math.floor(Math.random() * (a - 50)) + 50; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = 1000; const b = Math.floor(Math.random() * 400) + 100; return { question: `${a} - ${b} = `, answer: a - b }; },
-            ],
-            multiplication: [
-                () => { const a = Math.floor(Math.random() * 10) + 1; const b = Math.floor(Math.random() * 10) + 1; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = Math.floor(Math.random() * 12) + 1; const b = Math.floor(Math.random() * 12) + 1; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = Math.floor(Math.random() * 9) + 1; const b = 0; return { question: `${a} × ${b} = `, answer: 0 }; },
-                () => { const a = Math.floor(Math.random() * 9) + 2; const b = Math.floor(Math.random() * 9) + 2; return { question: `__ × ${b} = ${a * b}`, answer: a }; },
-                () => { const a = Math.floor(Math.random() * 20) + 10; const b = 10; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = Math.floor(Math.random() * 12) + 1; return { question: `${a} × 6 = `, answer: a * 6 }; },
-                () => { const a = Math.floor(Math.random() * 12) + 1; return { question: `${a} × 8 = `, answer: a * 8 }; },
-            ],
-            division: [
-                () => { const b = Math.floor(Math.random() * 10) + 2; const a = b * (Math.floor(Math.random() * 10) + 1); return { question: `${a} ÷ ${b} = `, answer: a / b }; },
-                () => { const b = Math.floor(Math.random() * 5) + 2; const q = Math.floor(Math.random() * 12) + 1; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const a = Math.floor(Math.random() * 50) + 10; const b = 1; return { question: `${a} ÷ ${b} = `, answer: a }; },
-                () => { const a = Math.floor(Math.random() * 60) + 12; return { question: `${a} ÷ ${a} = `, answer: 1 }; },
-                () => { const q = Math.floor(Math.random() * 10) + 2; const b = Math.floor(Math.random() * 9) + 2; return { question: `__ ÷ ${b} = ${q}`, answer: q * b }; },
-                () => { const b = 10; const q = Math.floor(Math.random() * 10) + 1; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const b = Math.floor(Math.random() * 8) + 2; const q = Math.floor(Math.random() * 8) + 2; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 4: Multi-digit operations, decimals, fractions ==========
-    generateGrade4Arithmetic(operation) {
-        const problems = {
-            addition: [
-                () => { const a = Math.floor(Math.random() * 5000) + 1000; const b = Math.floor(Math.random() * 5000) + 1000; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const a = Math.floor(Math.random() * 3000) + 2000; const b = Math.floor(Math.random() * 3000) + 2000; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const a = (Math.floor(Math.random() * 50) + 10) / 10; const b = (Math.floor(Math.random() * 50) + 10) / 10; return { question: `${a.toFixed(1)} + ${b.toFixed(1)} = `, answer: (a + b).toFixed(1) }; },
-                () => { const a = Math.floor(Math.random() * 8000) + 1000; const b = Math.floor(Math.random() * 2000) + 100; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const a = Math.floor(Math.random() * 4000) + 3000; const b = Math.floor(Math.random() * 4000) + 3000; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const a = (Math.floor(Math.random() * 30) + 5) / 10; const b = (Math.floor(Math.random() * 30) + 5) / 10; return { question: `${a.toFixed(1)} + ${b.toFixed(1)} = `, answer: (a + b).toFixed(1) }; },
-                () => { const a = Math.floor(Math.random() * 9999) + 1; const b = Math.floor(Math.random() * 9999) + 1; return { question: `${a} + ${b} = `, answer: a + b }; },
-            ],
-            subtraction: [
-                () => { const a = Math.floor(Math.random() * 5000) + 2000; const b = Math.floor(Math.random() * (a - 1000)) + 500; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 7000) + 3000; const b = Math.floor(Math.random() * 3000) + 1000; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = (Math.floor(Math.random() * 60) + 20) / 10; const b = (Math.floor(Math.random() * 30) + 5) / 10; return { question: `${a.toFixed(1)} - ${b.toFixed(1)} = `, answer: (a - b).toFixed(1) }; },
-                () => { const a = Math.floor(Math.random() * 9000) + 1000; const b = Math.floor(Math.random() * (a - 100)) + 100; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 8000) + 5000; const b = Math.floor(Math.random() * 4000) + 1000; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = (Math.floor(Math.random() * 50) + 10) / 10; const b = (Math.floor(Math.random() * 20) + 1) / 10; return { question: `${a.toFixed(1)} - ${b.toFixed(1)} = `, answer: (a - b).toFixed(1) }; },
-                () => { const a = Math.floor(Math.random() * 9999) + 1000; const b = Math.floor(Math.random() * (a - 500)) + 100; return { question: `${a} - ${b} = `, answer: a - b }; },
-            ],
-            multiplication: [
-                () => { const a = Math.floor(Math.random() * 50) + 10; const b = Math.floor(Math.random() * 50) + 10; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = Math.floor(Math.random() * 90) + 10; const b = Math.floor(Math.random() * 9) + 2; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = Math.floor(Math.random() * 12) + 1; const b = Math.floor(Math.random() * 12) + 1; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = Math.floor(Math.random() * 80) + 20; const b = 10; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = Math.floor(Math.random() * 30) + 10; const b = Math.floor(Math.random() * 30) + 10; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = Math.floor(Math.random() * 99) + 11; const b = Math.floor(Math.random() * 9) + 2; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = Math.floor(Math.random() * 20) + 5; const b = Math.floor(Math.random() * 20) + 5; return { question: `${a} × ${b} = `, answer: a * b }; },
-            ],
-            division: [
-                () => { const b = Math.floor(Math.random() * 12) + 1; const q = Math.floor(Math.random() * 50) + 10; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const b = Math.floor(Math.random() * 9) + 2; const q = Math.floor(Math.random() * 20) + 10; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const b = 10; const q = Math.floor(Math.random() * 90) + 10; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const b = Math.floor(Math.random() * 12) + 1; const q = Math.floor(Math.random() * 30) + 5; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const b = Math.floor(Math.random() * 8) + 2; const q = Math.floor(Math.random() * 99) + 11; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const b = 100; const q = Math.floor(Math.random() * 50) + 10; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const b = Math.floor(Math.random() * 9) + 2; const q = Math.floor(Math.random() * 15) + 5; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 5: Decimal operations, fraction operations, multi-digit division ==========
-    generateGrade5Arithmetic(operation) {
-        const problems = {
-            addition: [
-                () => { const a = (Math.floor(Math.random() * 500) + 100) / 100; const b = (Math.floor(Math.random() * 500) + 100) / 100; return { question: `${a.toFixed(2)} + ${b.toFixed(2)} = `, answer: (a + b).toFixed(2) }; },
-                () => { const a = (Math.floor(Math.random() * 300) + 50) / 100; const b = (Math.floor(Math.random() * 300) + 50) / 100; return { question: `${a.toFixed(2)} + ${b.toFixed(2)} = `, answer: (a + b).toFixed(2) }; },
-                () => { const d = 4; const n1 = Math.floor(Math.random() * 3) + 1; const n2 = Math.floor(Math.random() * 3) + 1; return { question: `${n1}/${d} + ${n2}/${d} = `, answer: `${n1 + n2}/${d}` }; },
-                () => { const a = (Math.floor(Math.random() * 900) + 100) / 100; const b = (Math.floor(Math.random() * 200) + 50) / 100; return { question: `${a.toFixed(2)} + ${b.toFixed(2)} = `, answer: (a + b).toFixed(2) }; },
-                () => { const d = 8; const n1 = Math.floor(Math.random() * 6) + 1; const n2 = Math.floor(Math.random() * 6) + 1; return { question: `${n1}/${d} + ${n2}/${d} = `, answer: `${n1 + n2}/${d}` }; },
-                () => { const a = (Math.floor(Math.random() * 800) + 200) / 100; const b = (Math.floor(Math.random() * 800) + 200) / 100; return { question: `${a.toFixed(2)} + ${b.toFixed(2)} = `, answer: (a + b).toFixed(2) }; },
-                () => { const d = 10; const n1 = Math.floor(Math.random() * 8) + 1; const n2 = Math.floor(Math.random() * 8) + 1; return { question: `${n1}/${d} + ${n2}/${d} = `, answer: `${n1 + n2}/${d}` }; },
-            ],
-            subtraction: [
-                () => { const a = (Math.floor(Math.random() * 500) + 200) / 100; const b = (Math.floor(Math.random() * 300) + 50) / 100; return { question: `${a.toFixed(2)} - ${b.toFixed(2)} = `, answer: (a - b).toFixed(2) }; },
-                () => { const a = (Math.floor(Math.random() * 800) + 300) / 100; const b = (Math.floor(Math.random() * 200) + 100) / 100; return { question: `${a.toFixed(2)} - ${b.toFixed(2)} = `, answer: (a - b).toFixed(2) }; },
-                () => { const d = 6; const n1 = Math.floor(Math.random() * 5) + 2; const n2 = Math.floor(Math.random() * n1) + 1; return { question: `${n1}/${d} - ${n2}/${d} = `, answer: `${n1 - n2}/${d}` }; },
-                () => { const a = (Math.floor(Math.random() * 900) + 400) / 100; const b = (Math.floor(Math.random() * 300) + 100) / 100; return { question: `${a.toFixed(2)} - ${b.toFixed(2)} = `, answer: (a - b).toFixed(2) }; },
-                () => { const d = 8; const n1 = Math.floor(Math.random() * 7) + 3; const n2 = Math.floor(Math.random() * n1) + 1; return { question: `${n1}/${d} - ${n2}/${d} = `, answer: `${n1 - n2}/${d}` }; },
-                () => { const a = (Math.floor(Math.random() * 1000) + 500) / 100; const b = (Math.floor(Math.random() * 400) + 100) / 100; return { question: `${a.toFixed(2)} - ${b.toFixed(2)} = `, answer: (a - b).toFixed(2) }; },
-                () => { const d = 12; const n1 = Math.floor(Math.random() * 10) + 4; const n2 = Math.floor(Math.random() * n1) + 1; return { question: `${n1}/${d} - ${n2}/${d} = `, answer: `${n1 - n2}/${d}` }; },
-            ],
-            multiplication: [
-                () => { const a = Math.floor(Math.random() * 90) + 10; const b = Math.floor(Math.random() * 90) + 10; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = (Math.floor(Math.random() * 50) + 10) / 10; const b = Math.floor(Math.random() * 9) + 2; return { question: `${a.toFixed(1)} × ${b} = `, answer: (a * b).toFixed(1) }; },
-                () => { const d = 4; const n = Math.floor(Math.random() * 3) + 1; const w = Math.floor(Math.random() * 5) + 2; return { question: `${n}/${d} × ${w} = `, answer: `${n * w}/${d}` }; },
-                () => { const a = Math.floor(Math.random() * 99) + 11; const b = Math.floor(Math.random() * 99) + 11; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = (Math.floor(Math.random() * 30) + 5) / 10; const b = Math.floor(Math.random() * 12) + 1; return { question: `${a.toFixed(1)} × ${b} = `, answer: (a * b).toFixed(1) }; },
-                () => { const a = Math.floor(Math.random() * 999) + 100; const b = Math.floor(Math.random() * 90) + 10; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const d = 5; const n = Math.floor(Math.random() * 4) + 1; const w = Math.floor(Math.random() * 8) + 2; return { question: `${n}/${d} × ${w} = `, answer: `${n * w}/${d}` }; },
-            ],
-            division: [
-                () => { const b = Math.floor(Math.random() * 90) + 10; const q = Math.floor(Math.random() * 90) + 10; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const b = Math.floor(Math.random() * 12) + 1; const q = Math.floor(Math.random() * 99) + 11; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const a = (Math.floor(Math.random() * 500) + 100) / 10; const b = 10; return { question: `${a.toFixed(1)} ÷ ${b} = `, answer: (a / b).toFixed(1) }; },
-                () => { const b = Math.floor(Math.random() * 99) + 11; const q = Math.floor(Math.random() * 50) + 10; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const a = (Math.floor(Math.random() * 800) + 200) / 10; const b = Math.floor(Math.random() * 9) + 2; return { question: `${a.toFixed(1)} ÷ ${b} = `, answer: (a / b).toFixed(1) }; },
-                () => { const b = Math.floor(Math.random() * 50) + 10; const q = Math.floor(Math.random() * 99) + 11; const a = b * q; return { question: `${a} ÷ ${b} = `, answer: q }; },
-                () => { const d = 6; const n = Math.floor(Math.random() * 5) + 1; const div = Math.floor(Math.random() * 4) + 2; return { question: `${n}/${d} ÷ ${div} = `, answer: `${n}/${d * div}` }; },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 6: Integers, ratios, percents, complex decimals/fractions ==========
-    generateGrade6Arithmetic(operation) {
-        const problems = {
-            addition: [
-                () => { const a = Math.floor(Math.random() * 20) - 10; const b = Math.floor(Math.random() * 20) - 10; return { question: `${a} + (${b}) = `, answer: a + b }; },
-                () => { const a = -Math.floor(Math.random() * 15) - 1; const b = Math.floor(Math.random() * 15) + 1; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const n1 = Math.floor(Math.random() * 5) + 1; const n2 = Math.floor(Math.random() * 5) + 1; const d1 = [2, 3, 4, 6][Math.floor(Math.random() * 4)]; const d2 = [2, 3, 4, 6][Math.floor(Math.random() * 4)]; return { question: `${n1}/${d1} + ${n2}/${d2} = `, answer: `(different denominators)` }; },
-                () => { const a = Math.floor(Math.random() * 30) - 15; const b = Math.floor(Math.random() * 30) - 15; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const a = (Math.floor(Math.random() * 1000) + 500) / 100; const b = (Math.floor(Math.random() * 1000) + 500) / 100; return { question: `${a.toFixed(2)} + ${b.toFixed(2)} = `, answer: (a + b).toFixed(2) }; },
-                () => { const a = -Math.floor(Math.random() * 25) - 5; const b = -Math.floor(Math.random() * 25) - 5; return { question: `${a} + (${b}) = `, answer: a + b }; },
-                () => { const pct1 = Math.floor(Math.random() * 30) + 10; const pct2 = Math.floor(Math.random() * 30) + 10; return { question: `${pct1}% + ${pct2}% = `, answer: `${pct1 + pct2}%` }; },
-            ],
-            subtraction: [
-                () => { const a = Math.floor(Math.random() * 20) - 10; const b = Math.floor(Math.random() * 20) - 10; return { question: `${a} - (${b}) = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 15) + 1; const b = -Math.floor(Math.random() * 15) - 1; return { question: `${a} - (${b}) = `, answer: a - b }; },
-                () => { const n1 = Math.floor(Math.random() * 7) + 2; const n2 = Math.floor(Math.random() * 5) + 1; const d1 = [2, 4, 8][Math.floor(Math.random() * 3)]; const d2 = [2, 4, 8][Math.floor(Math.random() * 3)]; return { question: `${n1}/${d1} - ${n2}/${d2} = `, answer: `(different denominators)` }; },
-                () => { const a = Math.floor(Math.random() * 30) - 15; const b = Math.floor(Math.random() * 30) - 15; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const a = (Math.floor(Math.random() * 1200) + 600) / 100; const b = (Math.floor(Math.random() * 500) + 200) / 100; return { question: `${a.toFixed(2)} - ${b.toFixed(2)} = `, answer: (a - b).toFixed(2) }; },
-                () => { const a = -Math.floor(Math.random() * 20) - 5; const b = Math.floor(Math.random() * 20) + 5; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const pct1 = Math.floor(Math.random() * 50) + 30; const pct2 = Math.floor(Math.random() * 30) + 10; return { question: `${pct1}% - ${pct2}% = `, answer: `${pct1 - pct2}%` }; },
-            ],
-            multiplication: [
-                () => { const a = Math.floor(Math.random() * 10) - 5; const b = Math.floor(Math.random() * 10) - 5; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = -Math.floor(Math.random() * 12) - 1; const b = Math.floor(Math.random() * 12) + 1; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const n1 = Math.floor(Math.random() * 5) + 1; const d1 = Math.floor(Math.random() * 5) + 2; const n2 = Math.floor(Math.random() * 5) + 1; const d2 = Math.floor(Math.random() * 5) + 2; return { question: `${n1}/${d1} × ${n2}/${d2} = `, answer: `${n1 * n2}/${d1 * d2}` }; },
-                () => { const a = (Math.floor(Math.random() * 50) + 10) / 10; const b = (Math.floor(Math.random() * 50) + 10) / 10; return { question: `${a.toFixed(1)} × ${b.toFixed(1)} = `, answer: (a * b).toFixed(2) }; },
-                () => { const a = -Math.floor(Math.random() * 15) - 2; const b = -Math.floor(Math.random() * 15) - 2; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const base = Math.floor(Math.random() * 80) + 20; const pct = Math.floor(Math.random() * 30) + 10; return { question: `${pct}% of ${base} = `, answer: Math.round(base * pct / 100) }; },
-                () => { const a = Math.floor(Math.random() * 999) + 100; const b = Math.floor(Math.random() * 999) + 100; return { question: `${a} × ${b} = `, answer: a * b }; },
-            ],
-            division: [
-                () => { const a = Math.floor(Math.random() * 20) - 10; const b = [2, 3, 4, 5][Math.floor(Math.random() * 4)]; return { question: `${a} ÷ ${b} = `, answer: (a / b).toFixed(2) }; },
-                () => { const b = -Math.floor(Math.random() * 9) - 2; const q = Math.floor(Math.random() * 10) + 1; const a = b * q; return { question: `${a} ÷ (${b}) = `, answer: q }; },
-                () => { const n1 = Math.floor(Math.random() * 5) + 1; const d1 = Math.floor(Math.random() * 5) + 2; const n2 = Math.floor(Math.random() * 4) + 1; const d2 = Math.floor(Math.random() * 4) + 2; return { question: `${n1}/${d1} ÷ ${n2}/${d2} = `, answer: `${n1 * d2}/${d1 * n2}` }; },
-                () => { const a = (Math.floor(Math.random() * 500) + 100) / 100; const b = (Math.floor(Math.random() * 20) + 5) / 10; return { question: `${a.toFixed(2)} ÷ ${b.toFixed(1)} = `, answer: (a / b).toFixed(2) }; },
-                () => { const a = -Math.floor(Math.random() * 50) - 10; const b = Math.floor(Math.random() * 9) + 2; return { question: `${a} ÷ ${b} = `, answer: (a / b).toFixed(2) }; },
-                () => { const ratio = `${Math.floor(Math.random() * 5) + 2}:${Math.floor(Math.random() * 5) + 2}`; const total = Math.floor(Math.random() * 80) + 40; return { question: `Divide ${total} in ratio ${ratio}`, answer: `(ratio problem)` }; },
-                () => { const a = Math.floor(Math.random() * 500) + 100; const b = Math.floor(Math.random() * 50) + 10; return { question: `${a} ÷ ${b} = `, answer: (a / b).toFixed(2) }; },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 7: Advanced fractions, integers, exponents, pre-algebra ==========
-    generateGrade7Arithmetic(operation) {
-        const problems = {
-            addition: [
-                () => { const a = Math.floor(Math.random() * 40) - 20; const b = Math.floor(Math.random() * 40) - 20; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const a = -Math.floor(Math.random() * 30) - 5; const b = -Math.floor(Math.random() * 30) - 5; return { question: `${a} + (${b}) = `, answer: a + b }; },
-                () => { const w1 = Math.floor(Math.random() * 3) + 1; const n1 = Math.floor(Math.random() * 5) + 1; const d1 = Math.floor(Math.random() * 5) + 3; const w2 = Math.floor(Math.random() * 3) + 1; const n2 = Math.floor(Math.random() * 5) + 1; const d2 = Math.floor(Math.random() * 5) + 3; return { question: `${w1} ${n1}/${d1} + ${w2} ${n2}/${d2} = `, answer: `(mixed numbers)` }; },
-                () => { const a = Math.floor(Math.random() * 50) - 25; const b = Math.floor(Math.random() * 50) - 25; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const n1 = Math.floor(Math.random() * 8) + 1; const d1 = [3, 4, 5, 6, 8, 10, 12][Math.floor(Math.random() * 7)]; const n2 = Math.floor(Math.random() * 8) + 1; const d2 = [3, 4, 5, 6, 8, 10, 12][Math.floor(Math.random() * 7)]; return { question: `${n1}/${d1} + ${n2}/${d2} = `, answer: `(find LCD)` }; },
-                () => { const a = (Math.floor(Math.random() * 2000) + 1000) / 100; const b = (Math.floor(Math.random() * 2000) + 1000) / 100; return { question: `${a.toFixed(2)} + ${b.toFixed(2)} = `, answer: (a + b).toFixed(2) }; },
-                () => { const base1 = Math.floor(Math.random() * 15) + 5; const exp1 = 2; const base2 = Math.floor(Math.random() * 15) + 5; const exp2 = 2; return { question: `${base1}² + ${base2}² = `, answer: base1 ** exp1 + base2 ** exp2 }; },
-            ],
-            subtraction: [
-                () => { const a = Math.floor(Math.random() * 40) - 20; const b = Math.floor(Math.random() * 40) - 20; return { question: `${a} - (${b}) = `, answer: a - b }; },
-                () => { const a = Math.floor(Math.random() * 30) + 10; const b = -Math.floor(Math.random() * 30) - 10; return { question: `${a} - (${b}) = `, answer: a - b }; },
-                () => { const w1 = Math.floor(Math.random() * 4) + 2; const n1 = Math.floor(Math.random() * 6) + 1; const d1 = Math.floor(Math.random() * 5) + 4; const w2 = Math.floor(Math.random() * 3) + 1; const n2 = Math.floor(Math.random() * 5) + 1; const d2 = Math.floor(Math.random() * 5) + 4; return { question: `${w1} ${n1}/${d1} - ${w2} ${n2}/${d2} = `, answer: `(mixed numbers)` }; },
-                () => { const a = Math.floor(Math.random() * 50) - 25; const b = Math.floor(Math.random() * 50) - 25; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const n1 = Math.floor(Math.random() * 10) + 3; const d1 = [4, 6, 8, 10, 12][Math.floor(Math.random() * 5)]; const n2 = Math.floor(Math.random() * 8) + 1; const d2 = [4, 6, 8, 10, 12][Math.floor(Math.random() * 5)]; return { question: `${n1}/${d1} - ${n2}/${d2} = `, answer: `(find LCD)` }; },
-                () => { const a = (Math.floor(Math.random() * 2500) + 1500) / 100; const b = (Math.floor(Math.random() * 1000) + 500) / 100; return { question: `${a.toFixed(2)} - ${b.toFixed(2)} = `, answer: (a - b).toFixed(2) }; },
-                () => { const base1 = Math.floor(Math.random() * 20) + 10; const exp1 = 2; const base2 = Math.floor(Math.random() * 15) + 5; const exp2 = 2; return { question: `${base1}² - ${base2}² = `, answer: base1 ** exp1 - base2 ** exp2 }; },
-            ],
-            multiplication: [
-                () => { const a = Math.floor(Math.random() * 20) - 10; const b = Math.floor(Math.random() * 20) - 10; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const a = -Math.floor(Math.random() * 15) - 3; const b = -Math.floor(Math.random() * 15) - 3; return { question: `(${a}) × (${b}) = `, answer: a * b }; },
-                () => { const w = Math.floor(Math.random() * 3) + 1; const n = Math.floor(Math.random() * 5) + 1; const d = Math.floor(Math.random() * 5) + 3; const mult = Math.floor(Math.random() * 8) + 2; return { question: `${w} ${n}/${d} × ${mult} = `, answer: `(mixed × whole)` }; },
-                () => { const base = Math.floor(Math.random() * 8) + 2; const exp = Math.floor(Math.random() * 3) + 2; return { question: `${base}^${exp} = `, answer: base ** exp }; },
-                () => { const n1 = Math.floor(Math.random() * 8) + 1; const d1 = Math.floor(Math.random() * 8) + 2; const n2 = Math.floor(Math.random() * 8) + 1; const d2 = Math.floor(Math.random() * 8) + 2; return { question: `${n1}/${d1} × ${n2}/${d2} = `, answer: `${n1 * n2}/${d1 * d2}` }; },
-                () => { const a = (Math.floor(Math.random() * 100) + 50) / 10; const b = (Math.floor(Math.random() * 100) + 50) / 10; return { question: `${a.toFixed(1)} × ${b.toFixed(1)} = `, answer: (a * b).toFixed(2) }; },
-                () => { const coeff = Math.floor(Math.random() * 8) + 2; const x = Math.floor(Math.random() * 10) + 1; return { question: `${coeff}x when x = ${x}`, answer: coeff * x }; },
-            ],
-            division: [
-                () => { const a = Math.floor(Math.random() * 40) - 20; const b = [2, 3, 4, 5, -2, -3, -4, -5][Math.floor(Math.random() * 8)]; return { question: `${a} ÷ ${b} = `, answer: (a / b).toFixed(2) }; },
-                () => { const a = -Math.floor(Math.random() * 50) - 10; const b = -Math.floor(Math.random() * 9) - 2; return { question: `${a} ÷ (${b}) = `, answer: (a / b).toFixed(2) }; },
-                () => { const n1 = Math.floor(Math.random() * 7) + 2; const d1 = Math.floor(Math.random() * 7) + 3; const n2 = Math.floor(Math.random() * 6) + 2; const d2 = Math.floor(Math.random() * 6) + 3; return { question: `${n1}/${d1} ÷ ${n2}/${d2} = `, answer: `${n1 * d2}/${d1 * n2}` }; },
-                () => { const a = (Math.floor(Math.random() * 800) + 200) / 100; const b = (Math.floor(Math.random() * 40) + 10) / 10; return { question: `${a.toFixed(2)} ÷ ${b.toFixed(1)} = `, answer: (a / b).toFixed(2) }; },
-                () => { const w = Math.floor(Math.random() * 4) + 2; const n = Math.floor(Math.random() * 6) + 1; const d = Math.floor(Math.random() * 6) + 3; const div = Math.floor(Math.random() * 5) + 2; return { question: `${w} ${n}/${d} ÷ ${div} = `, answer: `(mixed ÷ whole)` }; },
-                () => { const base = Math.floor(Math.random() * 6) + 2; const exp = Math.floor(Math.random() * 3) + 2; const div = Math.floor(Math.random() * 10) + 2; return { question: `${base}^${exp} ÷ ${div} = `, answer: (base ** exp / div).toFixed(2) }; },
-                () => { const expr = Math.floor(Math.random() * 50) + 20; const x = Math.floor(Math.random() * 8) + 2; return { question: `${expr}x ÷ ${x} = `, answer: expr }; },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 8: Exponents, scientific notation, linear equations, square roots ==========
-    generateGrade8Arithmetic(operation) {
-        const problems = {
-            addition: [
-                () => { const a = Math.floor(Math.random() * 60) - 30; const b = Math.floor(Math.random() * 60) - 30; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const base1 = Math.floor(Math.random() * 12) + 4; const base2 = Math.floor(Math.random() * 12) + 4; return { question: `${base1}² + ${base2}² = `, answer: base1 ** 2 + base2 ** 2 }; },
-                () => { const coeff1 = Math.floor(Math.random() * 9) + 1; const coeff2 = Math.floor(Math.random() * 9) + 1; return { question: `${coeff1}x + ${coeff2}x = `, answer: `${coeff1 + coeff2}x` }; },
-                () => { const mant1 = (Math.floor(Math.random() * 50) + 10) / 10; const mant2 = (Math.floor(Math.random() * 50) + 10) / 10; const exp = Math.floor(Math.random() * 4) + 2; return { question: `${mant1} × 10^${exp} + ${mant2} × 10^${exp} = `, answer: `${(mant1 + mant2).toFixed(1)} × 10^${exp}` }; },
-                () => { const a = Math.floor(Math.random() * 80) - 40; const b = Math.floor(Math.random() * 80) - 40; return { question: `${a} + ${b} = `, answer: a + b }; },
-                () => { const sqrt1 = Math.floor(Math.random() * 5) + 2; const sqrt2 = Math.floor(Math.random() * 5) + 2; return { question: `√${sqrt1 ** 2} + √${sqrt2 ** 2} = `, answer: sqrt1 + sqrt2 }; },
-                () => { const coeff1 = Math.floor(Math.random() * 8) + 2; const const1 = Math.floor(Math.random() * 15) + 5; const coeff2 = Math.floor(Math.random() * 8) + 2; const const2 = Math.floor(Math.random() * 15) + 5; return { question: `(${coeff1}x + ${const1}) + (${coeff2}x + ${const2}) = `, answer: `${coeff1 + coeff2}x + ${const1 + const2}` }; },
-            ],
-            subtraction: [
-                () => { const a = Math.floor(Math.random() * 60) - 30; const b = Math.floor(Math.random() * 60) - 30; return { question: `${a} - (${b}) = `, answer: a - b }; },
-                () => { const base1 = Math.floor(Math.random() * 15) + 8; const base2 = Math.floor(Math.random() * 12) + 4; return { question: `${base1}² - ${base2}² = `, answer: base1 ** 2 - base2 ** 2 }; },
-                () => { const coeff1 = Math.floor(Math.random() * 12) + 5; const coeff2 = Math.floor(Math.random() * 9) + 1; return { question: `${coeff1}x - ${coeff2}x = `, answer: `${coeff1 - coeff2}x` }; },
-                () => { const mant1 = (Math.floor(Math.random() * 70) + 30) / 10; const mant2 = (Math.floor(Math.random() * 40) + 10) / 10; const exp = Math.floor(Math.random() * 4) + 2; return { question: `${mant1} × 10^${exp} - ${mant2} × 10^${exp} = `, answer: `${(mant1 - mant2).toFixed(1)} × 10^${exp}` }; },
-                () => { const a = Math.floor(Math.random() * 80) - 40; const b = Math.floor(Math.random() * 80) - 40; return { question: `${a} - ${b} = `, answer: a - b }; },
-                () => { const sqrt1 = Math.floor(Math.random() * 7) + 5; const sqrt2 = Math.floor(Math.random() * 5) + 2; return { question: `√${sqrt1 ** 2} - √${sqrt2 ** 2} = `, answer: sqrt1 - sqrt2 }; },
-                () => { const coeff1 = Math.floor(Math.random() * 10) + 5; const const1 = Math.floor(Math.random() * 20) + 10; const coeff2 = Math.floor(Math.random() * 8) + 2; const const2 = Math.floor(Math.random() * 15) + 5; return { question: `(${coeff1}x + ${const1}) - (${coeff2}x + ${const2}) = `, answer: `${coeff1 - coeff2}x + ${const1 - const2}` }; },
-            ],
-            multiplication: [
-                () => { const base = Math.floor(Math.random() * 10) + 2; const exp = Math.floor(Math.random() * 4) + 2; return { question: `${base}^${exp} = `, answer: base ** exp }; },
-                () => { const a = Math.floor(Math.random() * 20) - 10; const b = Math.floor(Math.random() * 20) - 10; return { question: `${a} × ${b} = `, answer: a * b }; },
-                () => { const coeff = Math.floor(Math.random() * 12) + 2; const x = Math.floor(Math.random() * 15) + 1; return { question: `${coeff}x when x = ${x}`, answer: coeff * x }; },
-                () => { const mant1 = (Math.floor(Math.random() * 50) + 10) / 10; const exp1 = Math.floor(Math.random() * 4) + 2; const mant2 = (Math.floor(Math.random() * 50) + 10) / 10; const exp2 = Math.floor(Math.random() * 4) + 2; return { question: `(${mant1} × 10^${exp1}) × (${mant2} × 10^${exp2}) = `, answer: `${(mant1 * mant2).toFixed(2)} × 10^${exp1 + exp2}` }; },
-                () => { const base = Math.floor(Math.random() * 6) + 2; const exp1 = Math.floor(Math.random() * 3) + 2; const exp2 = Math.floor(Math.random() * 3) + 2; return { question: `${base}^${exp1} × ${base}^${exp2} = `, answer: `${base}^${exp1 + exp2}` }; },
-                () => { const coeff1 = Math.floor(Math.random() * 8) + 2; const coeff2 = Math.floor(Math.random() * 8) + 2; return { question: `${coeff1}x × ${coeff2} = `, answer: `${coeff1 * coeff2}x` }; },
-                () => { const a = -Math.floor(Math.random() * 15) - 3; const b = -Math.floor(Math.random() * 15) - 3; return { question: `${a} × ${b} = `, answer: a * b }; },
-            ],
-            division: [
-                () => { const base = Math.floor(Math.random() * 8) + 2; const exp = Math.floor(Math.random() * 4) + 2; const div = Math.floor(Math.random() * 20) + 5; return { question: `${base}^${exp} ÷ ${div} = `, answer: (base ** exp / div).toFixed(2) }; },
-                () => { const a = Math.floor(Math.random() * 60) - 30; const b = [2, 3, 4, 5, -2, -3, -4, -5][Math.floor(Math.random() * 8)]; return { question: `${a} ÷ ${b} = `, answer: (a / b).toFixed(2) }; },
-                () => { const expr = Math.floor(Math.random() * 80) + 20; const coeff = Math.floor(Math.random() * 10) + 2; return { question: `${expr}x ÷ ${coeff} = `, answer: `${(expr / coeff).toFixed(2)}x` }; },
-                () => { const mant1 = (Math.floor(Math.random() * 80) + 20) / 10; const exp1 = Math.floor(Math.random() * 5) + 3; const mant2 = (Math.floor(Math.random() * 40) + 10) / 10; const exp2 = Math.floor(Math.random() * 3) + 1; return { question: `(${mant1} × 10^${exp1}) ÷ (${mant2} × 10^${exp2}) = `, answer: `${(mant1 / mant2).toFixed(2)} × 10^${exp1 - exp2}` }; },
-                () => { const base = Math.floor(Math.random() * 6) + 2; const exp1 = Math.floor(Math.random() * 4) + 4; const exp2 = Math.floor(Math.random() * 3) + 1; return { question: `${base}^${exp1} ÷ ${base}^${exp2} = `, answer: `${base}^${exp1 - exp2}` }; },
-                () => { const perfect = [4, 9, 16, 25, 36, 49, 64, 81, 100][Math.floor(Math.random() * 9)]; return { question: `√${perfect} = `, answer: Math.sqrt(perfect) }; },
-                () => { const a = -Math.floor(Math.random() * 60) - 20; const b = -Math.floor(Math.random() * 9) - 2; return { question: `${a} ÷ (${b}) = `, answer: (a / b).toFixed(2) }; },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
     // ========== GRADES 9-12: Route to algebra, geometry, trigonometry, calculus ==========
     // For high school, we use existing subject-based generators rather than grade-specific arithmetic
     generateGrade9Arithmetic(operation) {
@@ -5355,7 +3724,7 @@ export class ProblemGenerator {
 
     generateGrade10Arithmetic(operation) {
         // Grade 10 (Geometry) - use geometry generators
-        return this.generateGeometryEquation(operation);
+        return this.generateGeometryProblem();
     }
 
     generateGrade11Arithmetic(operation) {
@@ -5369,385 +3738,12 @@ export class ProblemGenerator {
         const subject = subjects[Math.floor(Math.random() * subjects.length)];
 
         if (subject === 'precalculus') {
-            return this.generatePrecalculusEquation(operation);
+            return this.generatePrecalculusProblem();
         } else if (subject === 'calculus') {
-            return this.generateCalculusEquation(operation);
+            return this.generateCalculusProblem();
         } else {
-            return this.generateTrigonometryEquation(operation);
+            return this.generateTrigProblem();
         }
-    }
-
-    // ========== GRADE-SPECIFIC WORD PROBLEMS ==========
-    // Age-appropriate contexts for each grade level
-
-    // ========== GRADE 1: Simple scenarios with small numbers, familiar objects ==========
-    generateGrade1WordProblem(operation) {
-        const problems = {
-            addition: [
-                () => {
-                    const a = Math.floor(Math.random() * 5) + 1;
-                    const b = Math.floor(Math.random() * 5) + 1;
-                    return { question: `You have ${a} apples. Your friend gives you ${b} more apples. How many apples do you have now?`, answer: a + b };
-                },
-                () => {
-                    const a = Math.floor(Math.random() * 8) + 2;
-                    const b = Math.floor(Math.random() * 5) + 1;
-                    return { question: `There are ${a} birds in a tree. ${b} more birds fly to the tree. How many birds are there in total?`, answer: a + b };
-                },
-                () => {
-                    const a = Math.floor(Math.random() * 6) + 1;
-                    const b = Math.floor(Math.random() * 6) + 1;
-                    return { question: `Sam has ${a} toys. Emma has ${b} toys. How many toys do they have together?`, answer: a + b };
-                },
-                () => {
-                    const a = Math.floor(Math.random() * 7) + 3;
-                    const b = Math.floor(Math.random() * 5) + 1;
-                    return { question: `A basket has ${a} oranges. You add ${b} more oranges. How many oranges are in the basket?`, answer: a + b };
-                },
-            ],
-            subtraction: [
-                () => {
-                    const a = Math.floor(Math.random() * 8) + 3;
-                    const b = Math.floor(Math.random() * a) + 1;
-                    return { question: `You have ${a} cookies. You eat ${b} cookies. How many cookies are left?`, answer: a - b };
-                },
-                () => {
-                    const a = Math.floor(Math.random() * 10) + 5;
-                    const b = Math.floor(Math.random() * (a - 2)) + 1;
-                    return { question: `There are ${a} flowers in a garden. ${b} flowers are picked. How many flowers remain?`, answer: a - b };
-                },
-                () => {
-                    const a = Math.floor(Math.random() * 9) + 4;
-                    const b = Math.floor(Math.random() * (a - 1)) + 1;
-                    return { question: `A pond has ${a} ducks. ${b} ducks swim away. How many ducks are still in the pond?`, answer: a - b };
-                },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 2: Playground, classroom, simple story contexts ==========
-    generateGrade2WordProblem(operation) {
-        const problems = {
-            addition: [
-                () => {
-                    const a = Math.floor(Math.random() * 30) + 10;
-                    const b = Math.floor(Math.random() * 30) + 10;
-                    return { question: `A classroom has ${a} pencils and ${b} crayons. How many writing tools are there in total?`, answer: a + b };
-                },
-                () => {
-                    const a = Math.floor(Math.random() * 25) + 15;
-                    const b = Math.floor(Math.random() * 25) + 15;
-                    return { question: `On Monday, ${a} students rode the bus. On Tuesday, ${b} students rode the bus. How many students rode the bus on both days?`, answer: a + b };
-                },
-                () => {
-                    const a = Math.floor(Math.random() * 40) + 20;
-                    const b = Math.floor(Math.random() * 30) + 10;
-                    return { question: `A library has ${a} fiction books and ${b} non-fiction books. How many books does the library have?`, answer: a + b };
-                },
-            ],
-            subtraction: [
-                () => {
-                    const a = Math.floor(Math.random() * 50) + 20;
-                    const b = Math.floor(Math.random() * 20) + 5;
-                    return { question: `There are ${a} students in the playground. ${b} students go inside. How many students are still in the playground?`, answer: a - b };
-                },
-                () => {
-                    const a = Math.floor(Math.random() * 60) + 30;
-                    const b = Math.floor(Math.random() * 25) + 10;
-                    return { question: `A store had ${a} balloons. ${b} balloons were sold. How many balloons are left?`, answer: a - b };
-                },
-            ],
-            multiplication: [
-                () => {
-                    const a = Math.floor(Math.random() * 5) + 1;
-                    const b = 2;
-                    return { question: `There are ${a} pairs of shoes. How many shoes are there in total?`, answer: a * b };
-                },
-                () => {
-                    const a = Math.floor(Math.random() * 4) + 2;
-                    const b = 5;
-                    return { question: `You have ${a} hands. Each hand has ${b} fingers. How many fingers in total?`, answer: a * b };
-                },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 3: Multiplication, division, money, time ==========
-    generateGrade3WordProblem(operation) {
-        const problems = {
-            addition: [
-                () => {
-                    const a = Math.floor(Math.random() * 300) + 100;
-                    const b = Math.floor(Math.random() * 300) + 100;
-                    return { question: `A school collected ${a} cans in Week 1 and ${b} cans in Week 2 for recycling. How many cans were collected in total?`, answer: a + b };
-                },
-                () => {
-                    const dollars = Math.floor(Math.random() * 5) + 3;
-                    const cents = Math.floor(Math.random() * 50) + 25;
-                    return { question: `You have $${dollars}.${cents}. You earn $2.50 more. How much money do you have now?`, answer: `$${dollars + 2}.${cents + 50 > 99 ? (cents + 50 - 100).toString().padStart(2, '0') : (cents + 50).toString().padStart(2, '0')}` };
-                },
-            ],
-            subtraction: [
-                () => {
-                    const a = Math.floor(Math.random() * 500) + 200;
-                    const b = Math.floor(Math.random() * 200) + 50;
-                    return { question: `A bakery made ${a} cookies. They sold ${b} cookies. How many cookies are left?`, answer: a - b };
-                },
-            ],
-            multiplication: [
-                () => {
-                    const a = Math.floor(Math.random() * 8) + 3;
-                    const b = Math.floor(Math.random() * 8) + 3;
-                    return { question: `A bookshelf has ${a} shelves. Each shelf has ${b} books. How many books are there in total?`, answer: a * b };
-                },
-                () => {
-                    const a = Math.floor(Math.random() * 10) + 2;
-                    const b = Math.floor(Math.random() * 9) + 2;
-                    return { question: `There are ${a} boxes. Each box contains ${b} markers. How many markers are there altogether?`, answer: a * b };
-                },
-                () => {
-                    const price = Math.floor(Math.random() * 5) + 2;
-                    const qty = Math.floor(Math.random() * 6) + 3;
-                    return { question: `One notebook costs $${price}. How much do ${qty} notebooks cost?`, answer: `$${price * qty}` };
-                },
-            ],
-            division: [
-                () => {
-                    const b = Math.floor(Math.random() * 8) + 3;
-                    const q = Math.floor(Math.random() * 9) + 2;
-                    const a = b * q;
-                    return { question: `${a} students are divided equally into ${b} groups. How many students are in each group?`, answer: q };
-                },
-                () => {
-                    const b = Math.floor(Math.random() * 6) + 4;
-                    const q = Math.floor(Math.random() * 8) + 3;
-                    const a = b * q;
-                    return { question: `A teacher has ${a} stickers to share equally among ${b} students. How many stickers does each student get?`, answer: q };
-                },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 4: Multi-step, decimals, fractions in context ==========
-    generateGrade4WordProblem(operation) {
-        const problems = {
-            addition: [
-                () => {
-                    const a = (Math.floor(Math.random() * 30) + 10) / 10;
-                    const b = (Math.floor(Math.random() * 30) + 10) / 10;
-                    return { question: `A recipe needs ${a.toFixed(1)} cups of flour and ${b.toFixed(1)} cups of sugar. How many cups of dry ingredients are needed in total?`, answer: `${(a + b).toFixed(1)} cups` };
-                },
-                () => {
-                    const miles1 = Math.floor(Math.random() * 2000) + 1000;
-                    const miles2 = Math.floor(Math.random() * 1500) + 500;
-                    return { question: `A family drove ${miles1} miles on Saturday and ${miles2} miles on Sunday. How many total miles did they drive over the weekend?`, answer: `${miles1 + miles2} miles` };
-                },
-            ],
-            subtraction: [
-                () => {
-                    const a = (Math.floor(Math.random() * 50) + 20) / 10;
-                    const b = (Math.floor(Math.random() * 20) + 5) / 10;
-                    return { question: `A water bottle holds ${a.toFixed(1)} liters. After drinking ${b.toFixed(1)} liters, how much water remains?`, answer: `${(a - b).toFixed(1)} liters` };
-                },
-            ],
-            multiplication: [
-                () => {
-                    const length = Math.floor(Math.random() * 30) + 15;
-                    const width = Math.floor(Math.random() * 20) + 10;
-                    return { question: `A rectangular garden is ${length} feet long and ${width} feet wide. What is the area of the garden?`, answer: `${length * width} square feet` };
-                },
-                () => {
-                    const price = (Math.floor(Math.random() * 50) + 25) / 10;
-                    const qty = Math.floor(Math.random() * 12) + 8;
-                    return { question: `One pencil costs $${price.toFixed(2)}. How much would ${qty} pencils cost?`, answer: `$${(price * qty).toFixed(2)}` };
-                },
-            ],
-            division: [
-                () => {
-                    const total = Math.floor(Math.random() * 500) + 200;
-                    const people = Math.floor(Math.random() * 8) + 4;
-                    return { question: `A prize of $${total} is shared equally among ${people} winners. How much does each winner receive?`, answer: `$${(total / people).toFixed(2)}` };
-                },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 5: Fractions, decimals, volume, area ==========
-    generateGrade5WordProblem(operation) {
-        const problems = {
-            addition: [
-                () => {
-                    const a = (Math.floor(Math.random() * 300) + 100) / 100;
-                    const b = (Math.floor(Math.random() * 300) + 100) / 100;
-                    return { question: `Sarah ran ${a.toFixed(2)} kilometers on Monday and ${b.toFixed(2)} kilometers on Wednesday. What is the total distance she ran?`, answer: `${(a + b).toFixed(2)} km` };
-                },
-                () => {
-                    const d = 8;
-                    const n1 = Math.floor(Math.random() * 5) + 1;
-                    const n2 = Math.floor(Math.random() * 5) + 1;
-                    return { question: `A recipe calls for ${n1}/${d} cup of milk and ${n2}/${d} cup of cream. How many cups of liquid are needed in total?`, answer: `${n1 + n2}/${d} cups` };
-                },
-            ],
-            subtraction: [
-                () => {
-                    const a = (Math.floor(Math.random() * 500) + 200) / 100;
-                    const b = (Math.floor(Math.random() * 200) + 50) / 100;
-                    return { question: `A rope is ${a.toFixed(2)} meters long. ${b.toFixed(2)} meters are cut off. How much rope remains?`, answer: `${(a - b).toFixed(2)} meters` };
-                },
-            ],
-            multiplication: [
-                () => {
-                    const length = Math.floor(Math.random() * 50) + 30;
-                    const width = Math.floor(Math.random() * 40) + 20;
-                    const height = Math.floor(Math.random() * 15) + 10;
-                    return { question: `A rectangular box is ${length} cm long, ${width} cm wide, and ${height} cm tall. What is the volume?`, answer: `${length * width * height} cubic cm` };
-                },
-                () => {
-                    const rate = (Math.floor(Math.random() * 30) + 15) / 10;
-                    const hours = Math.floor(Math.random() * 8) + 3;
-                    return { question: `A worker earns $${rate.toFixed(2)} per hour. How much does the worker earn in ${hours} hours?`, answer: `$${(rate * hours).toFixed(2)}` };
-                },
-            ],
-            division: [
-                () => {
-                    const distance = Math.floor(Math.random() * 300) + 150;
-                    const time = Math.floor(Math.random() * 4) + 3;
-                    return { question: `A car travels ${distance} miles in ${time} hours. What is the average speed in miles per hour?`, answer: `${(distance / time).toFixed(1)} mph` };
-                },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 6: Ratios, percentages, integers, real-world applications ==========
-    generateGrade6WordProblem(operation) {
-        const problems = {
-            addition: [
-                () => {
-                    const a = Math.floor(Math.random() * 20) - 10;
-                    const b = Math.floor(Math.random() * 20) - 10;
-                    return { question: `The temperature in the morning was ${a}°C. It changed by ${b}°C by afternoon. What is the afternoon temperature?`, answer: `${a + b}°C` };
-                },
-                () => {
-                    const debt = -Math.floor(Math.random() * 50) - 20;
-                    const payment = Math.floor(Math.random() * 40) + 30;
-                    return { question: `A person has a debt of $${debt} (negative balance). They make a payment of $${payment}. What is their new balance?`, answer: `$${debt + payment}` };
-                },
-            ],
-            multiplication: [
-                () => {
-                    const base = Math.floor(Math.random() * 200) + 100;
-                    const pct = Math.floor(Math.random() * 30) + 10;
-                    return { question: `A store offers a ${pct}% discount on a $${base} jacket. How much money do you save?`, answer: `$${(base * pct / 100).toFixed(2)}` };
-                },
-                () => {
-                    const total = Math.floor(Math.random() * 150) + 100;
-                    const ratio1 = Math.floor(Math.random() * 3) + 2;
-                    const ratio2 = Math.floor(Math.random() * 3) + 2;
-                    return { question: `${total} marbles are divided between two friends in the ratio ${ratio1}:${ratio2}. How many marbles does the first friend get?`, answer: `${Math.round(total * ratio1 / (ratio1 + ratio2))} marbles` };
-                },
-            ],
-            division: [
-                () => {
-                    const miles = Math.floor(Math.random() * 250) + 150;
-                    const gallons = Math.floor(Math.random() * 8) + 5;
-                    return { question: `A car travels ${miles} miles using ${gallons} gallons of gas. What is the fuel efficiency in miles per gallon?`, answer: `${(miles / gallons).toFixed(1)} mpg` };
-                },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 7: Proportions, expressions, multi-step ==========
-    generateGrade7WordProblem(operation) {
-        const problems = {
-            addition: [
-                () => {
-                    const w1 = Math.floor(Math.random() * 3) + 1;
-                    const n1 = Math.floor(Math.random() * 5) + 1;
-                    const d = Math.floor(Math.random() * 5) + 4;
-                    const w2 = Math.floor(Math.random() * 3) + 1;
-                    const n2 = Math.floor(Math.random() * 5) + 1;
-                    return { question: `A carpenter cuts a board into two pieces measuring ${w1} ${n1}/${d} feet and ${w2} ${n2}/${d} feet. What is the total length of the board?`, answer: `${w1 + w2} ${n1 + n2}/${d} feet (approx)` };
-                },
-            ],
-            multiplication: [
-                () => {
-                    const initial = Math.floor(Math.random() * 500) + 200;
-                    const rate = Math.floor(Math.random() * 15) + 5;
-                    const time = Math.floor(Math.random() * 4) + 2;
-                    return { question: `A population of ${initial} bacteria increases by ${rate}% each hour. Approximately how much does it grow in ${time} hours? (Simple interest model)`, answer: `${Math.round(initial * rate * time / 100)} bacteria` };
-                },
-                () => {
-                    const base = Math.floor(Math.random() * 12) + 5;
-                    return { question: `What is the area of a square with side length ${base} units?`, answer: `${base * base} square units` };
-                },
-            ],
-            division: [
-                () => {
-                    const n1 = Math.floor(Math.random() * 6) + 2;
-                    const d1 = Math.floor(Math.random() * 6) + 3;
-                    const n2 = Math.floor(Math.random() * 5) + 2;
-                    const d2 = Math.floor(Math.random() * 5) + 3;
-                    return { question: `A recipe that serves ${n1}/${d1} of a group is divided to serve ${n2}/${d2}. Express the result as a fraction.`, answer: `${n1 * d2}/${d1 * n2}` };
-                },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
-    }
-
-    // ========== GRADE 8: Scientific notation, equations, functions ==========
-    generateGrade8WordProblem(operation) {
-        const problems = {
-            addition: [
-                () => {
-                    const mant1 = (Math.floor(Math.random() * 40) + 15) / 10;
-                    const mant2 = (Math.floor(Math.random() * 40) + 15) / 10;
-                    const exp = Math.floor(Math.random() * 3) + 3;
-                    return { question: `Two cities have populations of ${mant1} × 10^${exp} and ${mant2} × 10^${exp}. What is the combined population?`, answer: `${(mant1 + mant2).toFixed(1)} × 10^${exp}` };
-                },
-            ],
-            multiplication: [
-                () => {
-                    const coeff = Math.floor(Math.random() * 10) + 3;
-                    const x = Math.floor(Math.random() * 12) + 5;
-                    return { question: `The cost of renting a bike is $${coeff} per hour. How much does it cost to rent for ${x} hours?`, answer: `$${coeff * x}` };
-                },
-                () => {
-                    const base = Math.floor(Math.random() * 8) + 3;
-                    const exp = Math.floor(Math.random() * 3) + 2;
-                    return { question: `A bacteria colony doubles every hour. Starting with ${base} bacteria, express the population after ${exp} doubling periods using exponents.`, answer: `${base} × 2^${exp} = ${base * (2 ** exp)} bacteria` };
-                },
-            ],
-            division: [
-                () => {
-                    const distance = Math.floor(Math.random() * 500) + 300;
-                    const speed = Math.floor(Math.random() * 50) + 40;
-                    return { question: `A train travels ${distance} kilometers at a constant speed of ${speed} km/h. How many hours does the journey take?`, answer: `${(distance / speed).toFixed(2)} hours` };
-                },
-            ]
-        };
-
-        const ops = problems[operation] || problems.addition;
-        return ops[Math.floor(Math.random() * ops.length)]();
     }
 
     // ========== GRADES 9-12: Use subject-specific word problems ==========

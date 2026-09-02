@@ -8,6 +8,12 @@ import { WorksheetGenerator, LatexError, fileNameStem } from '../latex/worksheet
 import { ProgressManager } from './progressManager.js';
 import { createZip, saveBlob } from './zip.js';
 import { GRADE_CONFIGS, SUBJECT_TOPICS } from './constants.js';
+import { parametersForTopic, defaultParameterValues } from '../curriculum/config/parameters.js';
+
+/** A subject's display name, from the curriculum data rather than a copy of it. */
+function subjectLabel(subjectId) {
+    return SUBJECT_TOPICS[subjectId]?.name || subjectId;
+}
 
 export class FormManager {
     constructor() {
@@ -29,6 +35,8 @@ export class FormManager {
     }
 
     initializeForm() {
+        this.populateGradeLevels();
+
         // Form submission
         this.form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -63,6 +71,22 @@ export class FormManager {
         this.updateWorksheetTitle();
     }
 
+    /**
+     * Fills the grade selector from the curriculum data, so grade names and
+     * Ontario course codes live in one place.
+     */
+    populateGradeLevels() {
+        const select = document.getElementById('gradeLevel');
+        select.replaceChildren(...Object.values(GRADE_CONFIGS).map((grade) => {
+            const option = document.createElement('option');
+            option.value = grade.id;
+            option.textContent = grade.course
+                ? `${grade.name} — ${grade.courseName}`
+                : grade.name;
+            return option;
+        }));
+    }
+
     initializeAccordions() {
         const accordionToggles = document.querySelectorAll('.form-accordion-toggle');
 
@@ -95,21 +119,9 @@ export class FormManager {
             .filter(checkbox => checkbox.checked)
             .map(checkbox => checkbox.value);
 
-        // Get subject name(s)
-        const subjectNames = {
-            arithmetic: 'Arithmetic',
-            measurement: 'Measurement',
-            algebra: 'Algebra',
-            geometry: 'Geometry',
-            statistics: 'Statistics',
-            trigonometry: 'Trigonometry',
-            precalculus: 'Pre-Calculus',
-            calculus: 'Calculus'
-        };
-
         let subjectName = 'Math';
         if (selectedSubjects.length === 1) {
-            subjectName = subjectNames[selectedSubjects[0]] || 'Math';
+            subjectName = subjectLabel(selectedSubjects[0]);
         } else if (selectedSubjects.length > 1) {
             subjectName = 'Mixed Subjects';
         }
@@ -154,18 +166,6 @@ export class FormManager {
         const subjectContainer = document.getElementById('subjectSelection');
         const availableSubjects = GRADE_CONFIGS[gradeLevel].subjects;
 
-        // Subject display names
-        const subjectNames = {
-            arithmetic: 'Basic Arithmetic',
-            measurement: 'Measurement & Data',
-            algebra: 'Algebra',
-            geometry: 'Geometry',
-            statistics: 'Statistics & Probability',
-            trigonometry: 'Trigonometry',
-            precalculus: 'Pre-Calculus',
-            calculus: 'Calculus'
-        };
-
         // Clear current checkboxes
         subjectContainer.innerHTML = `
             <label class="checkbox-label">
@@ -180,7 +180,7 @@ export class FormManager {
             label.className = 'checkbox-label';
             label.innerHTML = `
                 <input type="checkbox" value="${subject}" class="checkbox-input subject-checkbox" checked>
-                <span class="checkbox-text">${subjectNames[subject]}</span>
+                <span class="checkbox-text">${subjectLabel(subject)}</span>
             `;
             subjectContainer.appendChild(label);
         });
@@ -231,17 +231,6 @@ export class FormManager {
         const gradeLevel = document.getElementById('gradeLevel').value;
         const topicContainer = document.getElementById('topicSelection');
 
-        // Map specific grades to broader categories used in subject files
-        const getGradeCategory = (gradeId) => {
-            const gradeNum = parseInt(gradeId.replace('grade', ''));
-            if (gradeNum >= 1 && gradeNum <= 5) return 'elementary';
-            if (gradeNum >= 6 && gradeNum <= 8) return 'middle';
-            if (gradeNum >= 9 && gradeNum <= 12) return 'high';
-            return 'college';
-        };
-
-        const gradeCategory = getGradeCategory(gradeLevel);
-
         if (selectedSubjects.length === 0) {
             topicContainer.innerHTML = `
                 <label class="checkbox-label">
@@ -251,18 +240,6 @@ export class FormManager {
             `;
             return;
         }
-
-        // Subject display names for grouping
-        const subjectNames = {
-            arithmetic: 'Arithmetic',
-            measurement: 'Measurement',
-            algebra: 'Algebra',
-            geometry: 'Geometry',
-            statistics: 'Statistics',
-            trigonometry: 'Trigonometry',
-            precalculus: 'Pre-Calculus',
-            calculus: 'Calculus'
-        };
 
         // Clear existing topics - "All Topics" checkbox starts checked
         topicContainer.innerHTML = `
@@ -282,14 +259,9 @@ export class FormManager {
 
             const allTopics = subjectConfig.topics;
 
-            // Filter topics by grade level using category mapping
-            const gradeAppropriateTopics = Object.entries(allTopics).filter(([key, topicData]) => {
-                if (typeof topicData === 'string') {
-                    return true;
-                }
-                // Check if the topic's grade array includes the current grade category
-                return topicData.grades && topicData.grades.includes(gradeCategory);
-            });
+            // Topics declare the grades they belong to, so filtering is direct.
+            const gradeAppropriateTopics = Object.entries(allTopics)
+                .filter(([, topic]) => topic.grades?.includes(gradeLevel));
 
             // Only show subject header if there are topics for this subject
             if (gradeAppropriateTopics.length > 0) {
@@ -297,21 +269,12 @@ export class FormManager {
                 const headerDiv = document.createElement('div');
                 headerDiv.className = 'topic-subject-header';
                 headerDiv.style.cssText = 'grid-column: 1 / -1; font-weight: 600; color: var(--accent-primary); margin-top: 8px; font-size: 0.875rem;';
-                headerDiv.textContent = subjectNames[subjectId] || subjectId;
+                headerDiv.textContent = subjectLabel(subjectId);
                 topicContainer.appendChild(headerDiv);
 
                 // Add individual grade-appropriate topics for this subject (auto-selected)
-                gradeAppropriateTopics.forEach(([key, topicData]) => {
-                    const label = document.createElement('label');
-                    label.className = 'checkbox-label';
-
-                    const topicName = typeof topicData === 'string' ? topicData : topicData.name;
-
-                    label.innerHTML = `
-                        <input type="checkbox" value="${subjectId}:${key}" class="topic-checkbox checkbox-input" checked>
-                        <span class="checkbox-text">${topicName}</span>
-                    `;
-                    topicContainer.appendChild(label);
+                gradeAppropriateTopics.forEach(([key, topic]) => {
+                    topicContainer.appendChild(this.buildTopicRow(subjectId, key, topic));
                 });
             }
         });
@@ -423,6 +386,102 @@ export class FormManager {
         }
     }
 
+    /**
+     * One topic row: the checkbox that includes it, plus a disclosure holding
+     * whatever parameters that topic exposes. Values are held on the element so
+     * re-rendering the list cannot lose them silently.
+     *
+     * @returns {HTMLElement}
+     */
+    buildTopicRow(subjectId, topicId, topic) {
+        const parameters = parametersForTopic(topic);
+        const row = document.createElement('div');
+        row.className = 'topic-row';
+
+        const label = document.createElement('label');
+        label.className = 'checkbox-label';
+        label.innerHTML = `
+            <input type="checkbox" value="${subjectId}:${topicId}" class="topic-checkbox checkbox-input" checked>
+            <span class="checkbox-text">${topic.name}</span>
+        `;
+        label.title = topic.description || '';
+        row.appendChild(label);
+
+        if (parameters.length === 0) return row;
+
+        const details = document.createElement('details');
+        details.className = 'topic-parameters';
+
+        const summary = document.createElement('summary');
+        summary.textContent = `Customize (${parameters.length})`;
+        details.appendChild(summary);
+
+        for (const parameter of parameters) {
+            details.appendChild(this.buildParameterControl(topicId, parameter));
+        }
+
+        row.appendChild(details);
+        return row;
+    }
+
+    /** A single labelled control bound to one topic parameter. */
+    buildParameterControl(topicId, parameter) {
+        const field = document.createElement('div');
+        field.className = 'topic-parameter';
+
+        const id = `param-${topicId}-${parameter.id}`;
+        const label = document.createElement('label');
+        label.htmlFor = id;
+        label.textContent = parameter.label;
+        label.title = parameter.help;
+
+        let input;
+        if (parameter.type === 'boolean') {
+            input = document.createElement('input');
+            input.type = 'checkbox';
+            input.checked = Boolean(parameter.default);
+        } else if (parameter.type === 'select') {
+            input = document.createElement('select');
+            for (const option of parameter.options) {
+                const element = document.createElement('option');
+                element.value = option.value;
+                element.textContent = option.label;
+                input.appendChild(element);
+            }
+            input.value = String(parameter.default);
+        } else {
+            input = document.createElement('input');
+            input.type = 'number';
+            input.min = parameter.min;
+            input.max = parameter.max;
+            input.step = parameter.step;
+            input.value = String(parameter.default);
+        }
+
+        input.id = id;
+        input.className = 'topic-parameter-input';
+        input.dataset.topic = topicId;
+        input.dataset.parameter = parameter.id;
+        input.dataset.type = parameter.type;
+
+        field.append(label, input);
+        return field;
+    }
+
+    /**
+     * Collects every parameter control into { topicId: { parameterId: value } }.
+     * The generator clamps these again, so a hand-edited value cannot break it.
+     */
+    getTopicParameters() {
+        const values = {};
+        for (const input of document.querySelectorAll('.topic-parameter-input')) {
+            const { topic, parameter, type } = input.dataset;
+            values[topic] ??= {};
+            values[topic][parameter] = type === 'boolean' ? input.checked : input.value;
+        }
+        return values;
+    }
+
     getFormData() {
         // Get selected operations
         const operationCheckboxes = document.querySelectorAll('input[type="checkbox"][id^="op-"]');
@@ -454,7 +513,9 @@ export class FormManager {
             const topicCheckboxes = document.querySelectorAll('.topic-checkbox');
             selectedTopics = Array.from(topicCheckboxes)
                 .filter(checkbox => checkbox.checked)
-                .map(checkbox => checkbox.value);
+                // Values are "subject:topic" so they stay unique in the DOM; the
+                // generators match on the bare topic id.
+                .map(checkbox => checkbox.value.split(':').pop());
         }
 
         // Convert difficulty slider value to string
@@ -481,7 +542,8 @@ export class FormManager {
             showPageNumberBox: document.getElementById('showPageNumberBox').checked,
             showPageBorder: document.getElementById('showPageBorder').checked,
             answerKey: document.getElementById('answerKey').value,
-            paperSize: document.getElementById('paperSize').value
+            paperSize: document.getElementById('paperSize').value,
+            topicParameters: this.getTopicParameters()
         };
     }
 

@@ -7,12 +7,14 @@
 
 export const grade9 = {
     id: 'grade9',
-    name: 'Grade 9 (Algebra I)',
+    name: 'Grade 9 (MTH1W)',
+    course: 'MTH1W',
+    courseName: 'Mathematics, De-streamed',
     ageRange: '14-15 years',
     description: 'MPM1D: Algebra, linear relations, analytic geometry, measurement and geometry',
 
     // Available subjects (MPM1D strands)
-    subjects: ['algebra', 'geometry', 'statistics'],
+    subjects: ['arithmetic', 'measurement', 'algebra', 'geometry', 'statistics', 'financialLiteracy'],
 
     // Number range
     maxNumber: 1000000,

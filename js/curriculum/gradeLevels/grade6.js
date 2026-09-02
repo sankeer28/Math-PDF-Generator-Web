@@ -12,7 +12,7 @@ export const grade6 = {
     description: 'Introduction to integers, divisibility rules (2,3,4,5,6,8,9,10), ratios, percents, algebraic patterns',
 
     // Available subjects (Ontario Strands: Number, Algebra, Data, Spatial Sense, Financial Literacy)
-    subjects: ['arithmetic', 'measurement', 'algebra', 'geometry', 'statistics'],
+    subjects: ['arithmetic', 'measurement', 'algebra', 'geometry', 'statistics', 'financialLiteracy'],
 
     // Number range (Ontario: working with larger numbers, introduction to negative numbers)
     maxNumber: 1000000,

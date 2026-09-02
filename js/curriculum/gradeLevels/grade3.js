@@ -12,7 +12,7 @@ export const grade3 = {
     description: 'Multiplication facts ×2, ×5, ×10, division, fractions as fair shares, numbers to 1000',
 
     // Available subjects (Ontario Strands: Number, Algebra, Data, Spatial Sense, Financial Literacy)
-    subjects: ['arithmetic', 'measurement', 'geometry', 'statistics'],
+    subjects: ['arithmetic', 'measurement', 'geometry', 'statistics', 'financialLiteracy'],
 
     // Number range (Ontario: numbers to 1000)
     maxNumber: 1000,
