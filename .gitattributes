@@ -1,0 +1,4 @@
+# Vendored engine and TeX bundle: byte-exact, never line-ending normalized.
+*.wasm binary
+*.gz binary
+*.pdf binary

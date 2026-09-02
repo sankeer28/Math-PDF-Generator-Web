@@ -4,15 +4,28 @@
  * @module formManager
  */
 
-import { PDFGenerator } from './pdfGenerator.js';
+import { WorksheetGenerator, LatexError, fileNameStem } from '../latex/worksheetGenerator.js';
+import { ProgressManager } from './progressManager.js';
+import { createZip, saveBlob } from './zip.js';
 import { GRADE_CONFIGS, SUBJECT_TOPICS } from './constants.js';
 
 export class FormManager {
     constructor() {
         this.form = document.getElementById('pdfForm');
-        this.pdfGenerator = new PDFGenerator();
-        this.currentPDFBlobUrl = null; // Store current blob URL for cleanup
+        this.worksheetGenerator = new WorksheetGenerator();
+        this.progress = new ProgressManager();
+        this.currentPDFBlobUrl = null;
         this.initializeForm();
+
+        // The TeX bundle is a few megabytes; fetch it while the teacher is still
+        // choosing options rather than making them wait once they hit Generate.
+        this.worksheetGenerator.prepare().then(
+            () => this.setEngineStatus('ready', 'LaTeX engine ready'),
+            (error) => {
+                console.error('The LaTeX engine failed to load:', error);
+                this.setEngineStatus('error', 'The LaTeX engine could not load. Check your connection and reload the page.');
+            }
+        );
     }
 
     initializeForm() {
@@ -467,15 +480,17 @@ export class FormManager {
             pageNumberPosition: document.getElementById('pageNumberPosition').value,
             showPageNumberBox: document.getElementById('showPageNumberBox').checked,
             showPageBorder: document.getElementById('showPageBorder').checked,
-            answerKey: document.getElementById('answerKey').value
+            answerKey: document.getElementById('answerKey').value,
+            paperSize: document.getElementById('paperSize').value
         };
     }
 
     validateFormData(formData) {
         const errors = [];
 
-        // Validate operations (only for arithmetic subject)
-        if (formData.subject === 'arithmetic' && formData.operations.length === 0) {
+        // Validate operations (only for arithmetic, the one subject that uses them).
+        // `subjects` is an array; the old singular `subject` never matched here.
+        if (formData.subjects.includes('arithmetic') && formData.operations.length === 0) {
             errors.push({
                 field: 'operations',
                 message: 'Please select at least one operation type.'
@@ -594,7 +609,7 @@ export class FormManager {
         }
     }
 
-    handleFormSubmit() {
+    async handleFormSubmit() {
         const formData = this.getFormData();
 
         const validationErrors = this.validateFormData(formData);
@@ -605,111 +620,155 @@ export class FormManager {
 
         this.clearValidationErrors();
         this.setFormEnabled(false);
-
-        this.pdfGenerator.generatePDFs(formData).then(() => {
-            this.setFormEnabled(true);
-        }).catch(error => {
-            console.error('Error generating PDFs:', error);
-            this.showGeneralError('An error occurred while generating PDFs. Please try again.', 'error');
-            this.setFormEnabled(true);
-        });
-    }
-
-    handlePreview() {
-        const formData = this.getFormData();
-
-        const basicErrors = this.validateFormData(formData).filter(error =>
-            !['generation-size', 'numPDFs', 'numPages'].includes(error.field)
-        );
-
-        if (basicErrors.length > 0) {
-            this.showValidationErrors(basicErrors);
-            return;
-        }
-
-        this.clearValidationErrors();
-        this.pdfGenerator.generatePreview(formData);
-    }
-
-    handlePDFPreview() {
-        const formData = this.getFormData();
-
-        const basicErrors = this.validateFormData(formData).filter(error =>
-            !['generation-size', 'numPDFs', 'numPages'].includes(error.field)
-        );
-
-        if (basicErrors.length > 0) {
-            this.showValidationErrors(basicErrors);
-            return;
-        }
-
-        this.clearValidationErrors();
+        this.progress.show();
 
         try {
-            // Clean up previous blob URL if exists
-            if (this.currentPDFBlobUrl) {
-                URL.revokeObjectURL(this.currentPDFBlobUrl);
+            if (!this.worksheetGenerator.isEngineReady) {
+                this.progress.updateProgress(4, 'Loading the LaTeX engine...');
+                await this.worksheetGenerator.prepare();
             }
 
-            // Generate PDF preview with all pages from settings
-            const { blobUrl, pdfBlob } = this.pdfGenerator.generatePDFPreview(formData);
-            this.currentPDFBlobUrl = blobUrl;
+            const worksheets = await this.worksheetGenerator.generateMany(formData, (done, total) => {
+                this.progress.updateProgress(
+                    10 + (done / total) * 85,
+                    `Typesetting worksheet ${Math.min(done + 1, total)} of ${total}...`
+                );
+            });
 
-            // Show PDF preview in the preview-content div
-            const previewContainer = document.getElementById('preview-container');
-            const previewContent = document.getElementById('preview-content');
-
-            // Build settings header
-            const operationText = formData.operations.length === 1 ? formData.operations[0] : `Mixed (${formData.operations.join(', ')})`;
-            const difficultyText = formData.difficulty.charAt(0).toUpperCase() + formData.difficulty.slice(1);
-
-            let topicText = 'All Topics';
-            if (formData.topics !== 'all' && formData.topics.length > 0) {
-                const subjectTopics = SUBJECT_TOPICS[formData.subject]?.topics || {};
-                const topicNames = formData.topics.map(topic => {
-                    const topicData = subjectTopics[topic];
-                    return typeof topicData === 'string' ? topicData : topicData?.name || topic;
-                });
-                topicText = topicNames.length === 1 ? topicNames[0] : `Selected (${topicNames.join(', ')})`;
-            }
-
-            const previewHeader = `
-                <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
-                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent-primary);">Preview Settings</h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; font-size: 0.9rem;">
-                        <div><strong>Grade:</strong> ${GRADE_CONFIGS[formData.gradeLevel]?.name}</div>
-                        <div><strong>Subject:</strong> ${SUBJECT_TOPICS[formData.subject]?.name}</div>
-                        <div><strong>Difficulty:</strong> ${difficultyText}</div>
-                        <div><strong>Problem Type:</strong> ${formData.problemType === 'mixed' ? 'Mixed Format' : formData.problemType}</div>
-                        <div><strong>Topics:</strong> ${topicText}</div>
-                        <div><strong>Operations:</strong> ${operationText}</div>
-                        <div><strong>Pages:</strong> ${formData.numPages} page${formData.numPages !== 1 ? 's' : ''}</div>
-                        <div><strong>Answer Key:</strong> ${formData.answerKey === 'separate' ? 'Yes' : 'No'}</div>
-                    </div>
-                </div>
-            `;
-
-            // Replace content with header and iframe
-            previewContent.innerHTML = `
-                ${previewHeader}
-                <iframe src="${blobUrl}" style="width: 100%; height: 800px; border: 1px solid var(--border-light); border-radius: var(--radius-md); display: block; background-color: #525659;"></iframe>
-            `;
-            previewContent.classList.add('pdf-mode');
-
-            // Show container
-            previewContainer.style.display = 'block';
-            previewContainer.classList.add('show');
-
-            // Scroll to the preview
-            setTimeout(() => {
-                previewContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-
-            console.log(`PDF Preview: Successfully displayed ${formData.numPages} pages in preview container`);
+            this.progress.updateProgress(97, 'Packaging the download...');
+            this.deliver(worksheets, formData);
+            this.progress.complete('Done.');
         } catch (error) {
-            console.error('Error generating PDF preview:', error);
-            this.showGeneralError('An error occurred while generating the PDF preview. Please try again.', 'error');
+            this.reportLatexFailure(error, 'generate these worksheets');
+        } finally {
+            this.progress.hide();
+            this.setFormEnabled(true);
         }
+    }
+
+    /** Saves a single PDF directly, or several as one ZIP. */
+    deliver(worksheets, formData) {
+        const stem = fileNameStem(formData.pdfTitle);
+
+        if (worksheets.length === 1) {
+            saveBlob(new Blob([worksheets[0].pdf], { type: 'application/pdf' }), worksheets[0].name);
+            return;
+        }
+
+        const zip = createZip(worksheets.map((sheet) => ({ name: sheet.name, data: sheet.pdf })));
+        saveBlob(zip, `${stem}_worksheets.zip`);
+    }
+
+    async handlePDFPreview() {
+        const formData = this.getFormData();
+
+        const basicErrors = this.validateFormData(formData).filter(error =>
+            !['generation-size', 'numPDFs', 'numPages'].includes(error.field)
+        );
+
+        if (basicErrors.length > 0) {
+            this.showValidationErrors(basicErrors);
+            return;
+        }
+
+        this.clearValidationErrors();
+        this.setFormEnabled(false);
+        this.progress.show();
+
+        try {
+            if (!this.worksheetGenerator.isEngineReady) {
+                this.progress.updateProgress(10, 'Loading the LaTeX engine...');
+                await this.worksheetGenerator.prepare();
+            }
+
+            this.progress.updateProgress(50, 'Typesetting the preview...');
+            const { pdf, source } = await this.worksheetGenerator.generateOne(formData);
+            this.showPreview(pdf, source, formData);
+        } catch (error) {
+            this.reportLatexFailure(error, 'typeset this preview');
+        } finally {
+            this.progress.hide();
+            this.setFormEnabled(true);
+        }
+    }
+
+    showPreview(pdf, source, formData) {
+        if (this.currentPDFBlobUrl) URL.revokeObjectURL(this.currentPDFBlobUrl);
+        this.currentPDFBlobUrl = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }));
+
+        const container = document.getElementById('preview-container');
+        const content = document.getElementById('preview-content');
+
+        content.replaceChildren(
+            this.buildPreviewSummary(formData),
+            buildPreviewFrame(this.currentPDFBlobUrl),
+            buildSourceView(source)
+        );
+        content.classList.add('pdf-mode');
+
+        container.style.display = 'block';
+        container.classList.add('show');
+        setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+
+    buildPreviewSummary(formData) {
+        const operations = formData.operations.length === 1
+            ? formData.operations[0]
+            : `Mixed (${formData.operations.join(', ')})`;
+
+        const subjects = (formData.subjects || [])
+            .map((subject) => SUBJECT_TOPICS[subject]?.name || subject)
+            .join(', ');
+
+        const summary = document.createElement('div');
+        summary.className = 'preview-summary';
+
+        const heading = document.createElement('h4');
+        heading.textContent = 'Preview settings';
+        summary.appendChild(heading);
+
+        const grid = document.createElement('dl');
+        grid.className = 'preview-summary-grid';
+        const rows = [
+            ['Grade', GRADE_CONFIGS[formData.gradeLevel]?.name || formData.gradeLevel],
+            ['Subjects', subjects || 'All'],
+            ['Difficulty', formData.difficulty],
+            ['Problem type', formData.problemType === 'mixed' ? 'Mixed format' : formData.problemType],
+            ['Operations', operations],
+            ['Pages', `${formData.numPages}`],
+            ['Paper', formData.paperSize === 'a4' ? 'A4' : 'Letter'],
+            ['Answer key', formData.answerKey === 'separate' ? 'Yes' : 'No'],
+        ];
+
+        for (const [label, value] of rows) {
+            const term = document.createElement('dt');
+            term.textContent = label;
+            const description = document.createElement('dd');
+            description.textContent = value;
+            grid.append(term, description);
+        }
+
+        summary.appendChild(grid);
+        return summary;
+    }
+
+    /** Turns an engine failure into something a user can act on. */
+    reportLatexFailure(error, action) {
+        console.error(`Could not ${action}:`, error);
+        if (error instanceof LatexError && error.log) console.error(error.log);
+
+        const detail = error instanceof LatexError && error.texError
+            ? ` LaTeX reported: ${error.texError}`
+            : '';
+        this.showGeneralError(`Could not ${action}.${detail} Please try again.`, 'error');
+    }
+
+    /** Tells the user where the engine is, since the first load takes a moment. */
+    setEngineStatus(state, message) {
+        const element = document.getElementById('engine-status');
+        if (!element) return;
+        element.className = `engine-status engine-status-${state}`;
+        element.textContent = message;
     }
 
     setFormEnabled(enabled) {
@@ -718,4 +777,30 @@ export class FormManager {
             input.disabled = !enabled;
         });
     }
+}
+
+/** The rendered PDF, shown inline so the teacher sees exactly what prints. */
+function buildPreviewFrame(blobUrl) {
+    const frame = document.createElement('iframe');
+    frame.className = 'preview-pdf-frame';
+    frame.src = blobUrl;
+    frame.title = 'Worksheet preview';
+    return frame;
+}
+
+/** The generated LaTeX, collapsed by default, for anyone who wants to tweak it. */
+function buildSourceView(source) {
+    const details = document.createElement('details');
+    details.className = 'preview-source';
+
+    const summary = document.createElement('summary');
+    summary.textContent = 'LaTeX source';
+    details.appendChild(summary);
+
+    const pre = document.createElement('pre');
+    pre.className = 'preview-source-code custom-scrollbar';
+    pre.textContent = source;
+    details.appendChild(pre);
+
+    return details;
 }

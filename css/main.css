@@ -231,3 +231,19 @@
     color: var(--error);
     border-color: var(--error);
 }
+
+/* Engine status: the LaTeX engine loads in the background on first visit */
+.engine-status {
+    margin-top: var(--spacing-md);
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+}
+
+.engine-status-ready {
+    color: var(--success, var(--text-tertiary));
+}
+
+.engine-status-error {
+    color: var(--error, var(--text-tertiary));
+}

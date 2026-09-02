@@ -1,0 +1,17 @@
+{
+  "name": "math-pdf-generator-web",
+  "version": "2.0.0",
+  "description": "Generate math worksheets typeset with LaTeX, entirely in the browser",
+  "license": "GPL-3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node --test \"tools/test/*.test.mjs\"",
+    "build:texlive": "node tools/build-texlive.mjs",
+    "sample": "node tools/render-sample.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
