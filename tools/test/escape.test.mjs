@@ -105,3 +105,14 @@ test('every sub- and superscript digit is mapped', () => {
         assert.ok(formatExpression(`x${superscript}`).includes(`^{${digit}}`), superscript);
     }
 });
+
+test('a blank in an exponent is braced', () => {
+    // "3^__" escapes the blank to a macro, and TeX reads only one token after
+    // ^, so without braces pdfTeX stops with "Missing { inserted" and the
+    // whole worksheet fails to typeset.
+    assert.equal(formatExpression('3^4 = 3^__'), '$3^4 = 3^{\\wsblank{}}$');
+    assert.match(formatExpression('2^3 × 2^4 = 2^__'), /\^\{\\wsblank\{\}\}/);
+
+    // A blank that is not in an exponent stays unbraced.
+    assert.equal(formatExpression('5 + __ = 12'), '$5 + \\wsblank{} = 12$');
+});

@@ -23,6 +23,19 @@
  * @typedef {(retry: () => GradeProblem) => GradeProblem} GradeTemplate
  */
 
+/**
+ * Writes a count with its noun, agreeing in number.
+ *
+ * The early grades draw from 1, so a template that hard-codes the plural asks
+ * a six-year-old to read "1 more apples". Irregular plurals pass their own.
+ *
+ * @param {number} count
+ * @param {string} singular
+ * @param {string} [plural]
+ * @returns {string}
+ */
+const count = (n, singular, plural = `${singular}s`) => `${n} ${n === 1 ? singular : plural}`;
+
 /** Equation-style problems. @type {Record<string, Record<string, GradeTemplate[]>>} */
 export const GRADE_EQUATIONS = {
     grade1: {
@@ -318,39 +331,39 @@ export const GRADE_WORD_PROBLEMS = {
             (retry) => {
                 const a = Math.floor(Math.random() * 5) + 1;
                 const b = Math.floor(Math.random() * 5) + 1;
-                return { question: `You have ${a} apples. Your friend gives you ${b} more apples. How many apples do you have now?`, answer: a + b };
+                return { question: `You have ${count(a, 'apple')}. Your friend gives you ${count(b, 'more apple')}. How many apples do you have now?`, answer: a + b };
             },
             (retry) => {
                 const a = Math.floor(Math.random() * 8) + 2;
                 const b = Math.floor(Math.random() * 5) + 1;
-                return { question: `There are ${a} birds in a tree. ${b} more birds fly to the tree. How many birds are there in total?`, answer: a + b };
+                return { question: `There are ${count(a, 'bird')} in a tree. ${count(b, 'more bird')} ${b === 1 ? 'flies' : 'fly'} to the tree. How many birds are there in total?`, answer: a + b };
             },
             (retry) => {
                 const a = Math.floor(Math.random() * 6) + 1;
                 const b = Math.floor(Math.random() * 6) + 1;
-                return { question: `Sam has ${a} toys. Emma has ${b} toys. How many toys do they have together?`, answer: a + b };
+                return { question: `Sam has ${count(a, 'toy')}. Emma has ${count(b, 'toy')}. How many toys do they have together?`, answer: a + b };
             },
             (retry) => {
                 const a = Math.floor(Math.random() * 7) + 3;
                 const b = Math.floor(Math.random() * 5) + 1;
-                return { question: `A basket has ${a} oranges. You add ${b} more oranges. How many oranges are in the basket?`, answer: a + b };
+                return { question: `A basket has ${count(a, 'orange')}. You add ${count(b, 'more orange')}. How many oranges are in the basket?`, answer: a + b };
             },
         ],
         subtraction: [
             (retry) => {
                 const a = Math.floor(Math.random() * 8) + 3;
                 const b = Math.floor(Math.random() * a) + 1;
-                return { question: `You have ${a} cookies. You eat ${b} cookies. How many cookies are left?`, answer: a - b };
+                return { question: `You have ${count(a, 'cookie')}. You eat ${count(b, 'cookie')}. How many cookies are left?`, answer: a - b };
             },
             (retry) => {
                 const a = Math.floor(Math.random() * 10) + 5;
                 const b = Math.floor(Math.random() * (a - 2)) + 1;
-                return { question: `There are ${a} flowers in a garden. ${b} flowers are picked. How many flowers remain?`, answer: a - b };
+                return { question: `There are ${count(a, 'flower')} in a garden. ${count(b, 'flower')} ${b === 1 ? 'is' : 'are'} picked. How many flowers remain?`, answer: a - b };
             },
             (retry) => {
                 const a = Math.floor(Math.random() * 9) + 4;
                 const b = Math.floor(Math.random() * (a - 1)) + 1;
-                return { question: `A pond has ${a} ducks. ${b} ducks swim away. How many ducks are still in the pond?`, answer: a - b };
+                return { question: `A pond has ${count(a, 'duck')}. ${count(b, 'duck')} ${b === 1 ? 'swims' : 'swim'} away. How many ducks are still in the pond?`, answer: a - b };
             },
         ]
     },
@@ -389,12 +402,12 @@ export const GRADE_WORD_PROBLEMS = {
             (retry) => {
                 const a = Math.floor(Math.random() * 5) + 1;
                 const b = 2;
-                return { question: `There are ${a} pairs of shoes. How many shoes are there in total?`, answer: a * b };
+                return { question: `There are ${count(a, 'pair')} of shoes. How many shoes are there in total?`, answer: a * b };
             },
             (retry) => {
                 const a = Math.floor(Math.random() * 4) + 2;
                 const b = 5;
-                return { question: `You have ${a} hands. Each hand has ${b} fingers. How many fingers in total?`, answer: a * b };
+                return { question: `${count(a, 'student')} each hold up one hand. Each hand has ${b} fingers. How many fingers are held up in total?`, answer: a * b };
             },
         ]
     },

@@ -94,9 +94,23 @@ function numberLine(ctx) {
         `\\draw (${n(i * unit)},0.1) -- (${n(i * unit)},-0.1) node[below,font=\\tiny] {$${format(start + i * step)}$};`
     ).join('\n  ');
 
+    const gap = step;
+    const tasks = [
+        ['What number does the arrow point to?', format(value)],
+        ['What is the spacing between two neighbouring ticks?', format(gap)],
+        ['What number is one tick to the right of the arrow?', format(value + step)],
+        ['What number is one tick to the left of the arrow?', format(value - step)],
+        ['What number does the number line start at?', format(start)],
+        ['What number does the number line end at?', format(start + ticks * step)],
+    ];
+    if (grade >= 3) tasks.push(['What number is halfway between the arrow and the next tick?', format(value + step / 2)]);
+    if (grade >= 4) tasks.push(['Is the arrow nearer the start or the end of the line?', marked < ticks / 2 ? 'the start' : (marked > ticks / 2 ? 'the end' : 'exactly halfway')]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'What number does the arrow point to?',
-        answer: format(value),
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw[<->] (-0.3,0) -- (${n(ticks * unit + 0.5)},0);\n  ${labels}\n` +
             `  \\draw[->,line width=0.9pt] (${n(marked * unit)},0.7) -- (${n(marked * unit)},0.13);`
@@ -156,11 +170,23 @@ function fractionCircle(ctx) {
         `  \\draw (0,0) -- (${n(r * Math.cos(rad(i * slice)))},${n(r * Math.sin(rad(i * slice)))});`
     ).join('\n');
 
+    const tasks = [
+        ['What fraction of the circle is shaded?', `${shaded}/${parts}`],
+        ['What fraction of the circle is not shaded?', `${parts - shaded}/${parts}`],
+        ['How many equal parts is the circle cut into?', parts],
+        ['How many parts are shaded?', shaded],
+    ];
+    if (grade >= 3) tasks.push(['Is more or less than half the circle shaded?', shaded / parts > 0.5 ? 'more' : (shaded / parts < 0.5 ? 'less' : 'exactly half')]);
+    if (grade >= 4) tasks.push(['What fraction of the circle is shaded? Give your answer in simplest form.', simplify(shaded, parts)]);
+    if (grade >= 5) tasks.push(['Write the shaded amount as a decimal.', n(Math.round((shaded / parts) * 1000) / 1000)]);
+    if (grade >= 6) tasks.push(['Write the shaded amount as a percent, to one decimal place.', `${n(Math.round((shaded / parts) * 1000) / 10)}%`]);
+    if (grade >= 6) tasks.push(['What is the angle at the centre of one slice?', `${n(360 / parts)}°`]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: grade >= 4 && level(ctx) === 2
-            ? 'What fraction of the circle is shaded? Give your answer in simplest form.'
-            : 'What fraction of the circle is shaded?',
-        answer: grade >= 4 && level(ctx) === 2 ? simplify(shaded, parts) : `${shaded}/${parts}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(`${wedges}\n  \\draw (0,0) circle (${r});\n${spokes}`),
     };
 }
@@ -215,11 +241,23 @@ function placeValueBlocks(ctx) {
         x += 0.16;
     }
 
+    const tasks = [
+        ['What number do these blocks show?', value],
+        ['How many ten-blocks are shown?', tens],
+        ['How many single ones are shown?', ones],
+        ['What is one more than the number shown?', value + 1],
+        ['What is ten more than the number shown?', value + 10],
+    ];
+    if (grade >= 2) tasks.push(['Write the number shown in expanded form.', hundreds > 0 ? `${hundreds * 100} + ${tens * 10} + ${ones}` : `${tens * 10} + ${ones}`]);
+    if (grade >= 3) tasks.push(['What is the value of the tens digit in the number shown?', tens * 10]);
+    if (grade >= 3) tasks.push(['Round the number shown to the nearest ten.', Math.round(value / 10) * 10]);
+    if (grade >= 4 && hundreds > 0) tasks.push(['What is the value of the hundreds digit?', hundreds * 100]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: grade >= 3 && level(ctx) === 2
-            ? 'What number do these blocks show, and what is the value of its tens digit?'
-            : 'What number do these blocks show?',
-        answer: grade >= 3 && level(ctx) === 2 ? `${value}, tens digit worth ${tens * 10}` : `${value}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(parts.join('\n')),
     };
 }
@@ -276,9 +314,22 @@ function ruler(ctx) {
         (half ? `\n  \\draw (${n(i * unit + unit / 2)},0.42) -- (${n(i * unit + unit / 2)},0.5);` : '')
     ).join('\n');
 
+    const tasks = [
+        ['How long is the bar, in centimetres?', `${length} cm`],
+        ['How long is the bar, in millimetres?', `${n(length * 10)} mm`],
+        [`How much shorter than ${marks} cm is the bar?`, `${n(marks - length)} cm`],
+        ['How long would two of these bars be end to end?', `${n(length * 2)} cm`],
+    ];
+    if (grade >= 3) tasks.push(['To the nearest whole centimetre, how long is the bar?', `${Math.round(length)} cm`]);
+    if (grade >= 3) tasks.push(['Is the bar longer or shorter than half the ruler?', length > marks / 2 ? 'longer' : (length < marks / 2 ? 'shorter' : 'exactly half')]);
+    if (grade >= 4) tasks.push(['What is half the length of the bar?', `${n(length / 2)} cm`]);
+    if (grade >= 5) tasks.push(['What fraction of the whole ruler does the bar cover?', simplify(Math.round(length * 2), marks * 2)]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'How long is the bar, in centimetres?',
-        answer: `${length} cm`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (0,0.34) rectangle (${n(marks * unit)},0.5);\n${ticks}\n` +
             `  \\fill[black!30,draw=black] (0,0.02) rectangle (${n(length * unit)},0.26);`
@@ -301,9 +352,23 @@ function thermometer(ctx) {
         ticks.push(`  \\draw (0.28,${at(v)}) -- (0.42,${at(v)}) node[right,font=\\tiny] {$${v}$};`);
     }
 
+    const drop = between(3, 12);
+    const tasks = [
+        ['What temperature does the thermometer show?', `${value}°C`],
+        [`The temperature falls ${drop} degrees from this reading. What does it show then?`, `${value - drop}°C`],
+        [`The temperature rises ${drop} degrees from this reading. What does it show then?`, `${value + drop}°C`],
+        ['Is this reading above or below freezing?', value > 0 ? 'above' : (value < 0 ? 'below' : 'exactly at freezing')],
+        ['How many degrees is this reading from 0°C?', Math.abs(value)],
+    ];
+    if (grade >= 4) tasks.push([`How many degrees warmer is this than ${value - drop}°C?`, drop]);
+    if (grade >= 5) tasks.push(['What is this reading in degrees Fahrenheit?', `${n(Math.round(((value * 9) / 5 + 32) * 10) / 10)}°F`]);
+    if (grade >= 6) tasks.push(['Write this reading as an integer.', value]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'What temperature does the thermometer show?',
-        answer: `${value}°C`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (0.12,0) rectangle (0.28,${n(height)});\n` +
             `  \\fill[black!35] (0.12,0) rectangle (0.28,${at(value)});\n` +
@@ -332,16 +397,25 @@ function clock(ctx) {
     }).join('\n');
 
     const shown = `${hour}:${String(minute).padStart(2, '0')}`;
-    let question = 'What time is shown on this clock?';
-    let answer = shown;
+    const later = randomChoice([20, 30, 45, 60, 90]);
+    const total = (hour % 12) * 60 + minute + later;
+    const laterHour = Math.floor(total / 60) % 12 || 12;
+    const earlier = (hour % 12) * 60 + minute - 30;
+    const earlierHour = Math.floor(((earlier + 720) % 720) / 60) || 12;
 
-    if (grade >= 4) {
-        const later = randomChoice([20, 30, 45, 60, 90]);
-        const total = (hour % 12) * 60 + minute + later;
-        const h = Math.floor(total / 60) % 12 || 12;
-        question = `What time will it be ${later} minutes after the time shown?`;
-        answer = `${h}:${String(total % 60).padStart(2, '0')}`;
-    }
+    const tasks = [
+        ['What time is shown on this clock?', shown],
+        ['What hour is the hour hand pointing to or just past?', hour],
+        ['How many minutes past the hour does this clock show?', minute],
+        ['How many minutes until the next hour?', 60 - minute || 60],
+    ];
+    if (grade >= 2) tasks.push(['What time will it be one hour after the time shown?', `${hour === 12 ? 1 : hour + 1}:${String(minute).padStart(2, '0')}`]);
+    if (grade >= 3) tasks.push(['Write the time shown in words.', minute === 0 ? `${hour} o'clock` : (minute === 30 ? `half past ${hour}` : (minute === 15 ? `quarter past ${hour}` : `${minute} minutes past ${hour}`))]);
+    if (grade >= 4) tasks.push([`What time will it be ${later} minutes after the time shown?`, `${laterHour}:${String(total % 60).padStart(2, '0')}`]);
+    if (grade >= 4) tasks.push(['What time was it 30 minutes before the time shown?', `${earlierHour}:${String(((earlier % 60) + 60) % 60).padStart(2, '0')}`]);
+    if (grade >= 5) tasks.push(['Write the time shown on a 24-hour clock, assuming it is the afternoon.', `${(hour % 12) + 12}:${String(minute).padStart(2, '0')}`]);
+
+    const [question, answer] = randomChoice(tasks);
 
     return {
         question,
@@ -367,9 +441,23 @@ function beaker(ctx) {
         `  \\draw (0.62,${at(i * step)}) -- (0.78,${at(i * step)}) node[right,font=\\tiny] {${i * step}};`
     ).join('\n');
 
+    const grade = gradeOf(ctx);
+    const tasks = [
+        ['How much liquid is in the jug, in millilitres?', `${value} mL`],
+        ['How much more liquid would fill the jug?', `${capacity - value} mL`],
+        ['What is the capacity of this jug, in millilitres?', `${capacity} mL`],
+        [`How much liquid would be left after pouring out ${step} mL?`, `${value - step} mL`],
+    ];
+    if (grade >= 3) tasks.push(['How much liquid is in the jug, in litres?', `${n(value / 1000)} L`]);
+    if (grade >= 4) tasks.push(['What fraction of the jug is filled?', simplify(value, capacity)]);
+    if (grade >= 5) tasks.push(['What percent of the jug is filled?', `${n((value / capacity) * 100)}%`]);
+    if (grade >= 5) tasks.push([`How many ${step} mL glasses can be poured from what is in the jug?`, value / step]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'How much liquid is in the jug, in millilitres?',
-        answer: `${value} mL`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\fill[black!18] (0.05,0) rectangle (0.75,${at(value)});\n` +
             `  \\draw (0.05,${n(height + 0.15)}) -- (0.05,0) -- (0.75,0) -- (0.75,${n(height + 0.15)});\n${ticks}`
@@ -385,11 +473,22 @@ function balanceScale(ctx) {
     const boxes = between(2, 4);
     const total = known * boxes;
 
+    const tasks = [
+        ['The scale balances. Each box has the same mass. What is the mass of one box?', known],
+        ['The scale balances. What is the total mass on the right pan?', total],
+        ['How many boxes are on the scale?', boxes],
+        ['If the scale balances, what does that say about the two sides?', 'their masses are equal'],
+    ];
+    if (grade >= 5) tasks.push(['What would the total mass be with one more box added to each side?', total + known]);
+    if (grade >= 6) tasks.push([`Write an equation for this balance using x for one box.`, `${boxes}x = ${total}`]);
+    if (grade >= 7) tasks.push([`Solve ${boxes}x = ${total}.`, known]);
+    if (grade >= 7) tasks.push(['If one box were removed from the left, what must be removed from the right to keep the balance?', `${known}`]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: algebraic
-            ? `The scale balances. Each box has the same mass. What is the mass of one box?`
-            : `The scale balances. What is the total mass on the right pan?`,
-        answer: algebraic ? `${known}` : `${total}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (-2.2,0) -- (2.2,0);\n  \\draw (0,0) -- (0,-0.5);\n  \\draw (-0.3,-0.5) -- (0.3,-0.5);\n` +
             `  \\draw (-2.2,0) -- (-2.2,0.28) node[above,font=\\tiny] {$${total}$};\n` +
@@ -442,9 +541,24 @@ function compositeShape(ctx) {
     const s = n(Math.min(2.8 / Math.max(a, b), 0.36));
     const area = a * b - c * d;
 
+    const grade = gradeOf(ctx);
+    const outerPerimeter = 2 * (a + b);
+
+    const tasks = [
+        ['Find the area of this shape.', `${area} square units`],
+        ['Find the area of the whole rectangle before the corner was removed.', `${a * b} square units`],
+        ['Find the area of the piece that was cut away.', `${c * d} square units`],
+        ['Find the perimeter of the rectangle this shape was cut from.', `${outerPerimeter} units`],
+    ];
+    if (grade >= 5) tasks.push(['What fraction of the rectangle is left?', simplify(area, a * b)]);
+    if (grade >= 6) tasks.push(['What percent of the rectangle was cut away?', `${n(Math.round(((c * d) / (a * b)) * 1000) / 10)}%`]);
+    if (grade >= 6) tasks.push(['How many unit squares of side 1 fit in the shape?', area]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'Find the area of this shape.',
-        answer: `${area} square units`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (0,0) -- (${n(a * s)},0) -- (${n(a * s)},${n((b - d) * s)}) -- (${n(c * s)},${n((b - d) * s)}) -- (${n(c * s)},${n(b * s)}) -- (0,${n(b * s)}) -- cycle;\n` +
             `  \\node[below,font=\\tiny] at (${n((a * s) / 2)},0) {$${a}$};\n` +
@@ -464,9 +578,23 @@ function rightTriangle(ctx) {
     const scale = n(2.9 / Math.max(a, b));
     const label = (side, value) => (missing === side ? '?' : `$${value}$`);
 
+    const grade = gradeOf(ctx);
+    const tasks = [
+        ['Find the missing side length of this right triangle.', missing === 'c' ? c : (missing === 'a' ? a : b)],
+        ['Find the area of this right triangle.', (a * b) / 2],
+        ['Find the perimeter of this right triangle.', a + b + c],
+        ['Which side of this triangle is the hypotenuse?', `the side of length ${c}`],
+    ];
+    if (grade >= 9) tasks.push(['Is this triangle right-angled? Write yes or no.', 'yes']);
+    if (grade >= 9) tasks.push([`Find sin of the angle opposite the side of length ${a}.`, simplify(a, c)]);
+    if (grade >= 10) tasks.push([`Find the angle opposite the side of length ${a}, to the nearest degree.`, `${Math.round((Math.asin(a / c) * 180) / Math.PI)}°`]);
+    if (grade >= 10) tasks.push(['Find the length of the altitude to the hypotenuse, to two decimals.', n(Math.round(((a * b) / c) * 100) / 100)]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'Find the missing side length of this right triangle.',
-        answer: missing === 'c' ? `${c}` : missing === 'a' ? `${a}` : `${b}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (0,0) -- (${n(b * scale)},0) -- (${n(b * scale)},${n(a * scale)}) -- cycle;\n` +
             `  \\draw (${n(b * scale - 0.2)},0) rectangle (${n(b * scale)},0.2);\n` +
@@ -486,16 +614,25 @@ function trigTriangle(ctx) {
     const ask = randomChoice(['opposite', 'adjacent', 'ratio']);
     const scale = n(2.9 / hyp);
 
-    const asked = {
-        opposite: [`Find the side opposite the ${angle}° angle, to 1 decimal place.`, `${opposite.toFixed(1)}`],
-        adjacent: [`Find the side adjacent to the ${angle}° angle, to 1 decimal place.`, `${adjacent.toFixed(1)}`],
-        ratio: [`Write sin, cos and tan of the ${angle}° angle, to 2 decimal places.`,
+    const asked = randomChoice([
+        [`Find the side opposite the ${angle}° angle, to 1 decimal place.`, opposite.toFixed(1)],
+        [`Find the side adjacent to the ${angle}° angle, to 1 decimal place.`, adjacent.toFixed(1)],
+        [`Write sin, cos and tan of the ${angle}° angle, to 2 decimal places.`,
             `sin ${Math.sin(rad(angle)).toFixed(2)}, cos ${Math.cos(rad(angle)).toFixed(2)}, tan ${Math.tan(rad(angle)).toFixed(2)}`],
-    }[ask];
+        [`Find sin of the ${angle}° angle, to 2 decimal places.`, Math.sin(rad(angle)).toFixed(2)],
+        [`Find cos of the ${angle}° angle, to 2 decimal places.`, Math.cos(rad(angle)).toFixed(2)],
+        [`Find tan of the ${angle}° angle, to 2 decimal places.`, Math.tan(rad(angle)).toFixed(2)],
+        [`Find the third angle of this right triangle.`, `${90 - angle}°`],
+        [`Which side of this triangle is the hypotenuse?`, `the side of length ${hyp}`],
+        [`Find the area of this triangle, to 1 decimal place.`, ((opposite * adjacent) / 2).toFixed(1)],
+        [`Find the perimeter of this triangle, to 1 decimal place.`, (opposite + adjacent + hyp).toFixed(1)],
+        [`Which ratio uses the opposite side and the hypotenuse?`, 'sine'],
+        [`Which ratio uses the opposite side and the adjacent side?`, 'tangent'],
+    ]);
 
     return {
         question: asked[0],
-        answer: asked[1],
+        answer: `${asked[1]}`,
         figure: tikz(
             `  \\draw (0,0) -- (${n(adjacent * scale)},0) -- (${n(adjacent * scale)},${n(opposite * scale)}) -- cycle;\n` +
             `  \\draw (${n(adjacent * scale - 0.2)},0) rectangle (${n(adjacent * scale)},0.2);\n` +
@@ -516,9 +653,16 @@ function circleMeasure(ctx) {
     const tasks = [
         ['Find the circumference of this circle. Use π ≈ 3.14, and round to 1 decimal place.', `${(2 * Math.PI * r).toFixed(1)}`],
         ['Find the area of this circle. Use π ≈ 3.14, and round to 1 decimal place.', `${(Math.PI * r * r).toFixed(1)}`],
+        ['Write the circumference of this circle in terms of π.', `${2 * r}π`],
+        ['Write the area of this circle in terms of π.', `${r * r}π`],
+        [showDiameter ? 'What is the radius of this circle?' : 'What is the diameter of this circle?',
+            showDiameter ? `${r}` : `${2 * r}`],
+        ['How many radii make one diameter?', 2],
     ];
-    if (grade <= 7) tasks.unshift([showDiameter ? 'What is the radius of this circle?' : 'What is the diameter of this circle?',
-        showDiameter ? `${r}` : `${2 * r}`]);
+    if (grade >= 8) tasks.push(['Find the area of a semicircle with this radius, in terms of π.', `${simplify(r * r, 2)}π`]);
+    if (grade >= 9) tasks.push(['Find the arc length of a quarter of this circle, in terms of π.', `${simplify(r, 2)}π`]);
+    if (grade >= 9) tasks.push(['If the radius doubled, how many times as large would the area be?', 4]);
+    if (grade >= 10) tasks.push([`Write the equation of this circle if it is centred at the origin.`, `x² + y² = ${r * r}`]);
 
     const [question, answer] = randomChoice(tasks);
 
@@ -594,13 +738,24 @@ function solidVolume(ctx) {
     const askVolume = Math.random() < 0.6;
     const d = 0.42;
 
+    const grade = gradeOf(ctx);
+    const tasks = [
+        ['Find the volume of this rectangular prism.', `${l * w * h} cubic units`],
+        ['Find the surface area of this rectangular prism.', `${2 * (l * w + l * h + w * h)} square units`],
+        ['How many faces does this prism have?', 6],
+        ['How many edges does this prism have?', 12],
+        ['Find the area of the base of this prism.', `${l * w} square units`],
+    ];
+    if (grade >= 6) tasks.push(['Find the total length of all the edges of this prism.', `${4 * (l + w + h)} units`]);
+    if (grade >= 7) tasks.push(['If every edge doubled, how many times as large would the volume be?', 8]);
+    if (grade >= 7) tasks.push(['How many unit cubes would fill this prism?', l * w * h]);
+    if (grade >= 9) tasks.push(['Find the length of the space diagonal of this prism, to two decimals.', n(Math.round(Math.sqrt(l * l + w * w + h * h) * 100) / 100)]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: askVolume
-            ? 'Find the volume of this rectangular prism.'
-            : 'Find the surface area of this rectangular prism.',
-        answer: askVolume
-            ? `${l * w * h} cubic units`
-            : `${2 * (l * w + l * h + w * h)} square units`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (0,0) rectangle (2,1.3);\n` +
             `  \\draw (0,1.3) -- (${d},${n(1.3 + d)}) -- (${n(2 + d)},${n(1.3 + d)}) -- (2,1.3);\n` +
@@ -654,9 +809,23 @@ function transformation(ctx) {
     const dy = between(1, 3);
     const gx = (v) => n(v * cell);
 
+    const grade = gradeOf(ctx);
+    const tasks = [
+        ['Describe the translation that maps the shaded shape onto the outlined one.', `${dx} right, ${dy} up`],
+        ['How far right does the shape move?', `${dx} units`],
+        ['How far up does the shape move?', `${dy} units`],
+        ['Does this translation change the size of the shape?', 'no'],
+        ['Name the transformation shown.', 'a translation'],
+    ];
+    if (grade >= 5) tasks.push(['Describe the translation that maps the outlined shape back onto the shaded one.', `${dx} left, ${dy} down`]);
+    if (grade >= 6) tasks.push(['Write this translation as a coordinate rule.', `(x, y) → (x + ${dx}, y + ${dy})`]);
+    if (grade >= 7) tasks.push(['Are the two shapes congruent or similar only?', 'congruent']);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'Describe the translation that maps the shaded shape onto the outlined one.',
-        answer: `${dx} right, ${dy} up`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw[step=${cell},black!22,line width=0.25pt] (0,0) grid (${gx(9)},${gx(7)});\n` +
             `  \\fill[black!25,draw=black] (${gx(1)},${gx(1)}) -- (${gx(3)},${gx(1)}) -- (${gx(1)},${gx(3)}) -- cycle;\n` +
@@ -689,7 +858,13 @@ function barGraph(ctx) {
         ['Which bar is tallest, and what is its value?', `${labels[values.indexOf(highest)]}, ${highest}`],
         ['Which bar is shortest, and what is its value?', `${labels[values.indexOf(lowest)]}, ${lowest}`],
     ];
-    if (grade >= 3) tasks.push(['What is the total of all four bars?', `${total}`]);
+    if (grade >= 2) tasks.push(['What is the total of all four bars?', `${total}`]);
+    if (grade >= 2) tasks.push(['How many bars are on this graph?', `${values.length}`]);
+    if (grade >= 2) tasks.push(['How much taller is the tallest bar than the shortest?', `${highest - lowest}`]);
+    if (grade >= 3) tasks.push(['How many bars are taller than the shortest bar?', `${values.filter((v) => v > lowest).length}`]);
+    if (grade >= 4) tasks.push(['What is the mean of the four bars, to two decimal places?', `${n(Math.round((total / values.length) * 100) / 100)}`]);
+    if (grade >= 5) tasks.push(['What fraction of the total does the tallest bar hold?', simplify(highest, total)]);
+    if (grade >= 6) tasks.push(['What percent of the total does the tallest bar hold, to one decimal place?', `${n(Math.round((highest / total) * 1000) / 10)}%`]);
     if (grade >= 3) tasks.push(['What is the difference between the tallest and shortest bar?', `${highest - lowest}`]);
     if (grade >= 5) tasks.push(['What is the mean of the four values?', `${n(total / values.length)}`]);
     if (grade >= 6) tasks.push(['What percent of the total does the tallest bar represent? Round to the nearest percent.',
@@ -733,9 +908,15 @@ function linePlot(ctx) {
     const tasks = [
         ['Which value appears most often?', `${mode}`],
         ['How many values are plotted in total?', `${data.length}`],
+        ['What is the smallest value plotted?', `${Math.min(...data)}`],
+        ['What is the largest value plotted?', `${Math.max(...data)}`],
+        [`How many times does the most common value appear?`, `${Math.max(...counts)}`],
     ];
     if (grade >= 4) tasks.push(['What is the range of the data?', `${range}`]);
+    if (grade >= 4) tasks.push(['What is the sum of all the values plotted?', `${data.reduce((a, b) => a + b, 0)}`]);
     if (grade >= 5) tasks.push(['What is the median of the data?', `${median}`]);
+    if (grade >= 5) tasks.push(['What is the mean of the data, to two decimal places?', `${n(Math.round((data.reduce((a, b) => a + b, 0) / data.length) * 100) / 100)}`]);
+    if (grade >= 6) tasks.push(['How many values are above the smallest value?', `${data.filter((v) => v > Math.min(...data)).length}`]);
 
     const [question, answer] = randomChoice(tasks);
     const unit = 0.44;
@@ -770,8 +951,21 @@ function pictograph(ctx) {
     ).join('\n');
 
     return {
-        question: `Each circle stands for ${each}. How many does ${labels[which]} represent?`,
-        answer: `${counts[which] * each}`,
+        ...(() => {
+            const totals = counts.map((count) => count * each);
+            const most = labels[totals.indexOf(Math.max(...totals))];
+            const fewest = labels[totals.indexOf(Math.min(...totals))];
+            const [question, answer] = randomChoice([
+                [`Each circle stands for ${each}. How many does ${labels[which]} represent?`, counts[which] * each],
+                [`Each circle stands for ${each}. How many symbols would show ${each * 4}?`, 4],
+                [`How many circles are drawn for ${labels[which]}?`, counts[which]],
+                ['Which row shows the most?', most],
+                ['Which row shows the fewest?', fewest],
+                [`Each circle stands for ${each}. What is the total of all the rows?`, totals.reduce((a, b) => a + b, 0)],
+                [`Each circle stands for ${each}. How many more does ${most} show than ${fewest}?`, Math.max(...totals) - Math.min(...totals)],
+            ]);
+            return { question, answer: `${answer}` };
+        })(),
         figure: tikz(rows),
     };
 }
@@ -792,9 +986,19 @@ function spinner(ctx) {
         `  \\draw (0,0) -- (${n(r * Math.cos(rad(i * slice)))},${n(r * Math.sin(rad(i * slice)))});`
     ).join('\n');
 
-    const tasks = [['What is the probability of landing on a shaded section?', simplify(winning, sectors)]];
+    const tasks = [
+        ['What is the probability of landing on a shaded section?', simplify(winning, sectors)],
+        ['How many equal sections does this spinner have?', sectors],
+        ['How many sections are shaded?', winning],
+        ['How many sections are not shaded?', sectors - winning],
+        ['Is landing on a shaded section likely or unlikely?', winning / sectors > 0.5 ? 'likely' : (winning / sectors < 0.5 ? 'unlikely' : 'equally likely')],
+    ];
+    if (grade >= 5) tasks.push(['Are all the outcomes on this spinner equally likely?', 'yes']);
     if (grade >= 6) tasks.push(['What is the probability of NOT landing on a shaded section?', simplify(sectors - winning, sectors)]);
-    if (grade >= 7) tasks.push([`If the spinner is spun ${sectors * 10} times, how many shaded results would you expect?`, `${winning * 10}`]);
+    if (grade >= 6) tasks.push(['Write the probability of a shaded result as a percent, to one decimal place.', `${n(Math.round((winning / sectors) * 1000) / 10)}%`]);
+    if (grade >= 7) tasks.push([`If the spinner is spun ${sectors * 10} times, how many shaded results would you expect?`, winning * 10]);
+    if (grade >= 8) tasks.push(['What do the probabilities of shaded and not shaded add to?', 1]);
+    if (grade >= 9) tasks.push(['Find the probability of two shaded results in two spins.', simplify(winning * winning, sectors * sectors)]);
 
     const [question, answer] = randomChoice(tasks);
 
@@ -829,6 +1033,21 @@ function lineGraph(ctx) {
                 return `${best} to ${best + 1}`;
             })()],
         ['What is the overall change from the first point to the last?', `${rise > 0 ? '+' : ''}${rise}`],
+        ['What is the lowest value shown?', `${Math.min(...values)}`],
+        ['How many points are plotted on this graph?', `${points}`],
+        ['Did the value end higher or lower than it started?', rise > 0 ? 'higher' : (rise < 0 ? 'lower' : 'the same')],
+        ['What is the difference between the highest and lowest values?', `${Math.max(...values) - Math.min(...values)}`],
+        ['What was the value at the first point?', `${values[0]}`],
+        ['What was the value at the last point?', `${values[values.length - 1]}`],
+        ['Between which two points does the value fall the most?',
+            (() => {
+                let best = 1;
+                let bestDrop = Infinity;
+                for (let i = 1; i < points; i += 1) {
+                    if (values[i] - values[i - 1] < bestDrop) { bestDrop = values[i] - values[i - 1]; best = i; }
+                }
+                return `${best} to ${best + 1}`;
+            })()],
     ];
     const [question, answer] = randomChoice(tasks);
 
@@ -865,6 +1084,12 @@ function linearGraph(ctx) {
     const tasks = [
         ['What is the slope of this line?', `${slope}`],
         ['What is the y-intercept of this line?', `${intercept}`],
+        ['Write the equation of this line in slope-intercept form.', `y = ${slope}x ${intercept < 0 ? '-' : '+'} ${Math.abs(intercept)}`],
+        ['Is this line increasing or decreasing?', slope > 0 ? 'increasing' : (slope < 0 ? 'decreasing' : 'neither, it is horizontal')],
+        ['What is the slope of a line parallel to this one?', `${slope}`],
+        ['What is the slope of a line perpendicular to this one?', slope === 0 ? 'undefined' : `${-1 / slope}`],
+        ['By how much does y change when x increases by 1?', `${slope}`],
+        ['Where does this line cross the y-axis?', `(0, ${intercept})`],
     ];
     if (grade >= 9) tasks.push(['Write the equation of this line in the form y = mx + b.',
         `y = ${slope}x ${intercept < 0 ? '-' : '+'} ${Math.abs(intercept)}`]);
@@ -902,7 +1127,15 @@ function growingPattern(ctx) {
         x += 4.2 * cell;
     }
 
-    const tasks = [['How many squares are in the next figure?', `${start + terms * step}`]];
+    const tasks = [
+        ['How many squares are in the next figure?', `${start + terms * step}`],
+        ['How many squares are added from one figure to the next?', `${step}`],
+        ['How many squares are in the first figure?', `${start}`],
+        ['How many figures are shown?', `${terms}`],
+        ['Is this pattern growing or shrinking?', step > 0 ? 'growing' : 'shrinking'],
+    ];
+    if (grade >= 4) tasks.push(['How many squares are in the figure after next?', `${start + (terms + 1) * step}`]);
+    if (grade >= 4) tasks.push(['How many squares are in the last figure shown?', `${start + (terms - 1) * step}`]);
     if (grade >= 6) tasks.push(['Write a rule for the number of squares in figure n.',
         `${step}n ${start - step < 0 ? '-' : '+'} ${Math.abs(start - step)}`]);
     if (grade >= 5) tasks.push(['How many squares are in figure 10?', `${start + 9 * step}`]);
@@ -926,9 +1159,22 @@ function inequalityLine(ctx) {
 
     const symbol = greater ? (closed ? '≥' : '>') : (closed ? '≤' : '<');
 
+    const inside = value + (greater ? 1 : -1);
+    const outside = value + (greater ? -1 : 1);
+
+    const [question, answer] = randomChoice([
+        ['Write the inequality shown on this number line.', `x ${symbol} ${value}`],
+        [`Is ${value} itself included in the solution set shown?`, closed ? 'yes' : 'no'],
+        ['Does the shading extend left or right on this number line?', greater ? 'right' : 'left'],
+        ['Is the circle at the endpoint open or closed?', closed ? 'closed' : 'open'],
+        [`Is ${inside} a solution to the inequality shown?`, 'yes'],
+        [`Is ${outside} a solution to the inequality shown?`, 'no'],
+        ['What is the smallest whole number in the solution set, if there is one?', greater ? (closed ? value : value + 1) : 'there is none'],
+    ]);
+
     return {
-        question: 'Write the inequality shown on this number line.',
-        answer: `x ${symbol} ${value}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw[<->] (-0.3,0) -- (${n(10 * cell + 0.3)},0);\n${ticks}\n` +
             `  \\draw[line width=1.3pt] (${gx(value)},0) -- (${greater ? n(10 * cell + 0.2) : -0.2},0);\n` +
@@ -941,13 +1187,32 @@ function inequalityLine(ctx) {
 
 /** A function machine. */
 function functionMachine(ctx) {
+    const grade = gradeOf(ctx);
     const multiplier = between(2, 6);
     const offset = between(1, 9);
     const input = between(1, 9);
+    const output = multiplier * input + offset;
+
+    // A machine is a rule, so it can be read in either direction and, once the
+    // grade has algebra, written as one. Asking only "what comes out" wastes it.
+    const tasks = [
+        [`What comes out of the machine when ${input} goes in?`, output],
+        [`What comes out when ${input + 1} goes in?`, multiplier * (input + 1) + offset],
+        [`What went in if ${output} came out?`, input],
+    ];
+    if (grade >= 4) tasks.push([`What comes out when 0 goes in?`, offset]);
+    if (grade >= 4) tasks.push([`How much does the output grow when the input grows by 1?`, multiplier]);
+    if (grade >= 4) tasks.push([`Write the machine's rule in words.`, `multiply by ${multiplier}, then add ${offset}`]);
+    if (grade >= 6) tasks.push([`Write the machine's rule as an equation using x.`, `y = ${multiplier}x + ${offset}`]);
+    if (grade >= 7) tasks.push([`If the machine's rule is reversed, what is the new rule?`, `subtract ${offset}, then divide by ${multiplier}`]);
+    if (grade >= 8) tasks.push([`What is the slope of the line this machine describes?`, multiplier]);
+    if (grade >= 8) tasks.push([`Where does this machine's line cross the y-axis?`, `(0, ${offset})`]);
+
+    const [question, answer] = randomChoice(tasks);
 
     return {
-        question: `What comes out of the machine when ${input} goes in?`,
-        answer: `${multiplier * input + offset}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (0,0) rectangle (2.2,1.0);\n` +
             `  \\node[font=\\scriptsize] at (1.1,0.5) {$\\times ${multiplier}$, then $+ ${offset}$};\n` +
@@ -1041,8 +1306,18 @@ function tangentLine(ctx) {
     const x2 = point + 1.6;
 
     return {
-        question: `The curve is y = ${a}x². What is the slope of the tangent drawn at x = ${point}?`,
-        answer: `${slope}`,
+        ...(() => {
+            const [question, answer] = randomChoice([
+                [`The curve is y = ${a}x². What is the slope of the tangent drawn at x = ${point}?`, slope],
+                [`The curve is y = ${a}x². Find dy/dx.`, `${2 * a}x`],
+                [`The curve is y = ${a}x². What is the slope of the tangent at x = 0?`, 0],
+                [`The curve is y = ${a}x². Write the equation of the tangent at x = ${point}.`, `y = ${slope}x - ${a * point * point + 3}`],
+                [`The curve is y = ${a}x². Is the curve increasing or decreasing at x = ${point}?`, 'increasing'],
+                [`The curve is y = ${a}x². What is the slope of the normal at x = ${point}?`, `-1/${slope}`],
+                [`The curve is y = ${a}x². At what x is the tangent horizontal?`, 0],
+            ]);
+            return { question, answer: `${answer}` };
+        })(),
         figure: tikz(
             `  \\draw[step=${cell},black!20,line width=0.25pt] (0,0) grid (${n(2 * max * cell)},${n(2 * max * cell)});\n` +
             `  \\draw[->] (0,${gx(0)}) -- (${n(2 * max * cell + 0.22)},${gx(0)}) node[right,font=\\tiny] {$x$};\n` +
@@ -1063,8 +1338,22 @@ function unitCircle(ctx) {
     const pair = exact[base] || ['?', '?'];
 
     return {
-        question: `The point is at ${angle}° on the unit circle. Give its coordinates.`,
-        answer: `(${Math.cos(rad(angle)).toFixed(3)}, ${Math.sin(rad(angle)).toFixed(3)})`,
+        ...(() => {
+            const quadrant = angle < 90 ? 'first' : (angle < 180 ? 'second' : (angle < 270 ? 'third' : 'fourth'));
+            const reference = angle < 90 ? angle : (angle < 180 ? 180 - angle : (angle < 270 ? angle - 180 : 360 - angle));
+            const [question, answer] = randomChoice([
+                [`The point is at ${angle}° on the unit circle. Give its coordinates.`, `(${Math.cos(rad(angle)).toFixed(3)}, ${Math.sin(rad(angle)).toFixed(3)})`],
+                [`The point is at ${angle}°. In which quadrant does it lie?`, `the ${quadrant}`],
+                [`The point is at ${angle}°. What is its reference angle?`, `${reference}°`],
+                [`The point is at ${angle}°. Is sin of this angle positive or negative?`, angle < 180 ? 'positive' : 'negative'],
+                [`The point is at ${angle}°. Is cos of this angle positive or negative?`, (angle < 90 || angle > 270) ? 'positive' : 'negative'],
+                [`The point is at ${angle}°. Give the angle in radians, in terms of π.`, `${simplify(angle, 180)}π`],
+                [`The point is at ${angle}°. Give sin of this angle to three decimals.`, Math.sin(rad(angle)).toFixed(3)],
+                [`The point is at ${angle}°. Give cos of this angle to three decimals.`, Math.cos(rad(angle)).toFixed(3)],
+                ['What is the radius of the unit circle?', 1],
+            ]);
+            return { question, answer: `${answer}` };
+        })(),
         figure: tikz(
             `  \\draw (0,0) circle (${r});\n` +
             `  \\draw[->] (${n(-r - 0.3)},0) -- (${n(r + 0.3)},0);\n` +
@@ -1094,8 +1383,18 @@ function coins(ctx) {
     ).join('\n');
 
     const paid = Math.ceil(total / 100) * 100;
-    const tasks = [['How much money is shown?', `$${(total / 100).toFixed(2)}`]];
+    const largest = Math.max(...picked.map(([value]) => value));
+
+    const tasks = [
+        ['How much money is shown?', `$${(total / 100).toFixed(2)}`],
+        ['How many coins are shown?', picked.length],
+        ['How much money is shown, in cents?', `${total} cents`],
+        ['What is the value of the largest coin shown?', `${largest} cents`],
+    ];
+    if (grade >= 2) tasks.push(['How much more is needed to make one dollar?', `${Math.max(0, 100 - total)} cents`]);
     if (grade >= 3) tasks.push([`If you pay with $${(paid / 100).toFixed(2)}, how much change is left?`, `$${((paid - total) / 100).toFixed(2)}`]);
+    if (grade >= 3) tasks.push(['How much would twice this amount be?', `$${((total * 2) / 100).toFixed(2)}`]);
+    if (grade >= 4) tasks.push(['Rounded to the nearest dollar, how much is shown?', `$${Math.round(total / 100)}`]);
 
     const [question, answer] = randomChoice(tasks);
     return { question, answer, figure: tikz(drawn) };
@@ -1127,8 +1426,20 @@ function budgetPie(ctx) {
     }).join('\n');
 
     return {
-        question: `The circle shows a monthly budget for an income of $${income}. How much goes to ${slices[which][0]}?`,
-        answer: `$${((income * slices[which][1]) / 100).toFixed(2)}`,
+        ...(() => {
+            const [label, percent] = slices[which];
+            const biggest = slices.reduce((best, slice) => (slice[1] > best[1] ? slice : best));
+            const [question, answer] = randomChoice([
+                [`The circle shows a monthly budget for an income of $${income}. How much goes to ${label}?`, `$${((income * percent) / 100).toFixed(2)}`],
+                [`The budget shows an income of $${income}. What percent goes to ${label}?`, `${percent}%`],
+                ['Which category takes the largest share of this budget?', biggest[0]],
+                [`The budget shows an income of $${income}. How much is left after ${label}?`, `$${((income * (100 - percent)) / 100).toFixed(2)}`],
+                ['What do all the percentages in a budget circle add to?', '100%'],
+                [`What angle at the centre does the ${label} slice take?`, `${n(Math.round(percent * 3.6 * 10) / 10)}°`],
+                [`On an income of $${income * 2}, how much would go to ${label} at the same percent?`, `$${((income * 2 * percent) / 100).toFixed(2)}`],
+            ]);
+            return { question, answer: `${answer}` };
+        })(),
         figure: tikz(`${wedges}\n  \\draw (0,0) circle (1.15);`),
     };
 }
@@ -1157,6 +1468,12 @@ function sineWave(ctx) {
         ['What is the amplitude of this function?', `${amplitude}`],
         ['What is the equation of the axis of the curve?', `y = ${shift}`],
         ['State the maximum and minimum values.', `max ${amplitude + shift}, min ${shift - amplitude}`],
+        ['What is the maximum value of this function?', `${amplitude + shift}`],
+        ['What is the minimum value of this function?', `${shift - amplitude}`],
+        ['State the range of this function.', `${shift - amplitude} ≤ y ≤ ${amplitude + shift}`],
+        ['Is the curve shown a sine or a cosine shape at x = 0?', 'sine'],
+        ['How far does the curve rise above its axis?', `${amplitude}`],
+        ['What is the vertical shift of this curve?', `${shift}`],
     ];
 
     return {
@@ -1231,6 +1548,11 @@ function rationalAsymptote(ctx) {
         ['What is the equation of the vertical asymptote?', `x = ${h}`],
         ['What is the equation of the horizontal asymptote?', `y = ${k}`],
         ['State the domain of this function.', `all real numbers except x = ${h}`],
+        ['State the range of this function.', `all real numbers except y = ${k}`],
+        ['What value of x makes the denominator zero?', `${h}`],
+        ['Does the curve ever cross its vertical asymptote?', 'no'],
+        ['As x grows very large, what value does y approach?', `${k}`],
+        ['How many vertical asymptotes does this function have?', '1'],
     ];
     const [question, answer] = randomChoice(tasks);
 
@@ -1269,6 +1591,11 @@ function polynomialCurve(ctx) {
         ['Describe the end behaviour of this function.',
             lead > 0 ? 'falls on the left, rises on the right' : 'rises on the left, falls on the right'],
         ['What are the zeros of this function?', roots.map((r) => `x = ${r}`).join(', ')],
+        ['How many turning points does this curve appear to have?', '2'],
+        ['Is the leading coefficient positive or negative?', lead > 0 ? 'positive' : 'negative'],
+        ['Is the degree of this polynomial odd or even?', 'odd'],
+        ['How many x-intercepts does the graph show?', `${roots.length}`],
+        ['What is the maximum number of real zeros a cubic can have?', '3'],
     ];
     const [question, answer] = randomChoice(tasks);
 
@@ -1299,6 +1626,12 @@ function vectorSum(ctx) {
     const tasks = [
         ['Write the resultant vector in component form.', `(${rx}, ${ry})`],
         ['Find the magnitude of the resultant, to 1 decimal place.', `${Math.hypot(rx, ry).toFixed(1)}`],
+        ['What is the x-component of the resultant?', `${rx}`],
+        ['What is the y-component of the resultant?', `${ry}`],
+        ['Find the direction of the resultant, to the nearest degree.',
+            `${Math.round((Math.atan2(ry, rx) * 180) / Math.PI)}°`],
+        ['Does the order of adding two vectors change the resultant?', 'no'],
+        ['Write the resultant scaled by 2 in component form.', `(${rx * 2}, ${ry * 2})`],
     ];
     const [question, answer] = randomChoice(tasks);
 
@@ -1326,10 +1659,16 @@ function boxPlot(ctx) {
     const x = (v) => n(v * unit);
 
     const tasks = [
-        ['What is the median of this data set?', `${median}`],
-        ['What is the interquartile range?', `${q3 - q1}`],
-        ['What is the range of this data set?', `${max - min}`],
-        ['What value is the upper quartile?', `${q3}`],
+        ['What is the median of this data set?', median],
+        ['What is the interquartile range?', q3 - q1],
+        ['What is the range of this data set?', max - min],
+        ['What value is the upper quartile?', q3],
+        ['What value is the lower quartile?', q1],
+        ['What is the smallest value in this data set?', min],
+        ['What is the largest value in this data set?', max],
+        ['What percent of the data lies inside the box?', '50%'],
+        ['What percent of the data lies below the median?', '50%'],
+        ['Is the data more spread out above or below the median?', (max - median) > (median - min) ? 'above' : ((max - median) < (median - min) ? 'below' : 'equally')],
     ];
     const [question, answer] = randomChoice(tasks);
 
@@ -1392,9 +1731,25 @@ function factorTree(ctx) {
     const composite = p1 * p2;
     const total = composite * p3;
 
+    const grade = gradeOf(ctx);
+    const factors = [p1, p2, p3].sort((a, b) => a - b);
+
+    const tasks = [
+        ['Complete the factor tree: what is the missing value?', composite],
+        [`What number is at the top of the tree?`, total],
+        ['Write the prime factorisation of the number at the top.', factors.join(' × ')],
+        ['How many prime factors does the top number have, counting repeats?', 3],
+    ];
+    if (grade >= 5) tasks.push(['What is the largest prime factor of the top number?', Math.max(p1, p2, p3)]);
+    if (grade >= 5) tasks.push(['What is the smallest prime factor of the top number?', Math.min(p1, p2, p3)]);
+    if (grade >= 6) tasks.push(['Is the number at the top prime or composite?', 'composite']);
+    if (grade >= 6) tasks.push([`Is the top number divisible by ${p3}?`, 'yes']);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'Complete the factor tree: what is the missing value?',
-        answer: `${composite}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\node[font=\\scriptsize] (a) at (1.4,1.7) {$${total}$};\n` +
             `  \\node[font=\\scriptsize] (b) at (0.5,0.9) {$${p3}$};\n` +
@@ -1446,9 +1801,26 @@ function operationChain(ctx) {
         return block;
     }).join('\n');
 
+    const grade = gradeOf(ctx);
+    const firstStep = steps[0][0] === '+' ? start + steps[0][1]
+        : (steps[0][0] === '-' ? start - steps[0][1] : start * steps[0][1]);
+
+    const tasks = [
+        ['Follow the boxes from left to right. What is the result?', value],
+        ['What value comes out of the first box?', firstStep],
+        ['How many operations does the chain apply?', steps.length],
+        ['What is the first operation in the chain?', `${steps[0][0] === '\\times' ? 'multiply by' : (steps[0][0] === '+' ? 'add' : 'subtract')} ${steps[0][1]}`],
+    ];
+    if (grade >= 4) tasks.push(['Does the chain give the same result if the boxes are reversed?', 'not always']);
+    if (grade >= 4) tasks.push(['By how much did the chain change the starting number?', value - start]);
+    if (grade >= 4) tasks.push(['Is the result larger or smaller than the starting number?', value > start ? 'larger' : (value < start ? 'smaller' : 'the same')]);
+    if (grade >= 5) tasks.push(['What is the starting number of the chain?', start]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'Follow the boxes from left to right. What is the result?',
-        answer: `${value}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\node[font=\\scriptsize] at (-0.62,0.3) {$${start}$};\n${boxes}\n` +
             `  \\draw[->] (${n(x - 0.35)},0.3) -- (${n(x)},0.3);\n` +
@@ -1497,9 +1869,23 @@ function unitLadder(ctx) {
         (i < rungs.length - 1 ? `\n  \\draw[->] (0.28,${n(-i * 0.5 - 0.08)}) -- (0.28,${n(-i * 0.5 - 0.42)});` : '')
     ).join('\n');
 
+    const grade = gradeOf(ctx);
+    const tasks = [
+        [`Use the ladder: convert ${value} ${rungs[from]} to ${rungs[to]}.`, `${value * multiplier} ${rungs[to]}`],
+        [`Use the ladder: convert ${value * multiplier} ${rungs[to]} back to ${rungs[from]}.`, `${value} ${rungs[from]}`],
+        [`How many rungs apart are ${rungs[from]} and ${rungs[to]} on this ladder?`, steps],
+        [`Going from ${rungs[from]} to ${rungs[to]}, do you multiply or divide?`, 'multiply'],
+        [`What number do you multiply by to go from ${rungs[from]} to ${rungs[to]}?`, multiplier],
+        ['Which unit on this ladder is the largest?', 'km'],
+        ['Which unit on this ladder is the smallest?', 'mm'],
+    ];
+    if (grade >= 6) tasks.push([`Convert ${value * 2} ${rungs[from]} to ${rungs[to]}.`, `${value * 2 * multiplier} ${rungs[to]}`]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: `Use the ladder: convert ${value} ${rungs[from]} to ${rungs[to]}.`,
-        answer: `${value * multiplier} ${rungs[to]}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(ladder),
     };
 }
@@ -1560,8 +1946,19 @@ function algebraTiles(ctx) {
     ).join('\n');
 
     return {
-        question: 'Write the expression these algebra tiles represent.',
-        answer: `${a === 1 ? '' : a}x² + ${b === 1 ? '' : b}x`,
+        ...(() => {
+            const expression = `${a === 1 ? '' : a}x² + ${b === 1 ? '' : b}x`;
+            const [question, answer] = randomChoice([
+                ['Write the expression these algebra tiles represent.', expression],
+                ['How many x² tiles are shown?', a],
+                ['How many x tiles are shown?', b],
+                ['What is the degree of the expression these tiles show?', 2],
+                ['Factor the expression these tiles represent.', `x(${a === 1 ? '' : a}x + ${b})`],
+                ['What is the common factor of the two terms shown?', 'x'],
+                ['Evaluate the expression these tiles show when x = 2.', a * 4 + b * 2],
+            ]);
+            return { question, answer: `${answer}` };
+        })(),
         figure: tikz(`${squares}\n${bars}`),
     };
 }
@@ -1573,13 +1970,22 @@ function areaModel(ctx) {
     const ones = between(1, 9);
     const multiplier = between(2, 9);
 
+    const tasks = [
+        ['Use the area model to find the product.', multiplier * (tens + ones)],
+        ['What is the area of the left part of the model?', multiplier * tens],
+        ['What is the area of the right part of the model?', multiplier * ones],
+        ['What two numbers are being multiplied in this model?', `${multiplier} and ${tens + ones}`],
+        ['Into how many parts has the model split the larger factor?', 2],
+    ];
+    if (grade >= 5) tasks.push(['Add the two part-areas. What do you get?', multiplier * (tens + ones)]);
+    if (grade >= 6) tasks.push(['Which property of multiplication does this model show?', 'the distributive property']);
+    if (grade >= 9) tasks.push(['Write the product this area model represents, expanded.', `${multiplier * tens} + ${multiplier * ones} = ${multiplier * (tens + ones)}`]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: grade >= 9
-            ? 'Write the product this area model represents, expanded.'
-            : 'Use the area model to find the product.',
-        answer: grade >= 9
-            ? `${multiplier * tens} + ${multiplier * ones} = ${multiplier * (tens + ones)}`
-            : `${multiplier * (tens + ones)}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (0,0) rectangle (2.1,0.9);\n  \\draw (1.5,0) -- (1.5,0.9);\n` +
             `  \\node[font=\\tiny] at (0.75,0.45) {$${multiplier} \\times ${tens}$};\n` +
@@ -1614,6 +2020,11 @@ function absoluteValueGraph(ctx) {
         ['What are the coordinates of the vertex?', `(${h}, ${k})`],
         ['Write the equation of this function.', `y = |x ${h < 0 ? '+' : '-'} ${Math.abs(h)}| ${k < 0 ? '-' : '+'} ${Math.abs(k)}`],
         ['State the range of this function.', `y ≥ ${k}`],
+        ['State the domain of this function.', 'all real numbers'],
+        ['What is the axis of symmetry of this graph?', `x = ${h}`],
+        ['Does this graph open upward or downward?', 'upward'],
+        ['What is the minimum value of this function?', `${k}`],
+        ['How many x-intercepts does this graph have?', k > 0 ? '0' : (k === 0 ? '1' : '2')],
     ];
     const [question, answer] = randomChoice(tasks);
 
@@ -1649,8 +2060,18 @@ function codingFlow(ctx) {
     ).join('\n');
 
     return {
-        question: `The program starts at ${start} and runs top to bottom. What value does it end with?`,
-        answer: `${value}`,
+        ...(() => {
+            const [question, answer] = randomChoice([
+                [`The program starts at ${start} and runs top to bottom. What value does it end with?`, value],
+                ['How many instructions does this program run?', instructions.length],
+                [`The program starts at ${start}. By how much did the value change overall?`, value - start],
+                [`Is the final value larger or smaller than the starting value of ${start}?`, value > start ? 'larger' : (value < start ? 'smaller' : 'the same')],
+                ['What is the first instruction the program runs?', instructions[0][0]],
+                ['What is the last instruction the program runs?', instructions[instructions.length - 1][0]],
+                [`If the program started at ${start + 1} instead, would every step still work?`, 'yes'],
+            ]);
+            return { question, answer: `${answer}` };
+        })(),
         figure: tikz(boxes),
     };
 }
@@ -1691,9 +2112,23 @@ function similarTriangles(ctx) {
     // run clear off the page.
     const s = n(Math.min(1.5 / (base * factor), 1.2 / (height * factor)));
 
+    const grade = gradeOf(ctx);
+    const tasks = [
+        ['These triangles are similar. Find the missing side length.', height * factor],
+        ['What is the scale factor from the small triangle to the large one?', factor],
+        ['What is the scale factor from the large triangle to the small one?', `1/${factor}`],
+        ['Find the area of the small triangle.', n((base * height) / 2)],
+    ];
+    if (grade >= 8) tasks.push(['Find the area of the large triangle.', n((base * factor * height * factor) / 2)]);
+    if (grade >= 8) tasks.push(['How many times as large is the area of the big triangle?', factor * factor]);
+    if (grade >= 9) tasks.push(['Are these triangles congruent or similar only?', factor === 1 ? 'congruent' : 'similar only']);
+    if (grade >= 9) tasks.push(['Do similar triangles have equal corresponding angles?', 'yes']);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'These triangles are similar. Find the missing side length.',
-        answer: `${height * factor}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (0,0) -- (${n(base * s)},0) -- (0,${n(height * s)}) -- cycle;\n` +
             `  \\node[below,font=\\tiny] at (${n(base * s / 2)},0) {$${base}$};\n` +
@@ -1712,22 +2147,50 @@ function symmetryShape(ctx) {
         ['a parallelogram', '  \\draw (0,0) -- (1.8,0) -- (2.3,1.1) -- (0.5,1.1) -- cycle;\n  \\draw[dashed] (1.15,-0.2) -- (1.15,1.3);', 'no'],
         ['an isosceles triangle', '  \\draw (0,0) -- (2.0,0) -- (1.0,1.5) -- cycle;\n  \\draw[dashed] (1.0,-0.2) -- (1.0,1.7);', 'yes'],
     ];
-    const [, drawing, answer] = randomChoice(shapes);
+    const grade = gradeOf(ctx);
+    const [name, drawing, symmetric] = randomChoice(shapes);
+    const LINES = { 'a rectangle': 2, 'a parallelogram': 0, 'an isosceles triangle': 1 };
+    const ORDER = { 'a rectangle': 2, 'a parallelogram': 2, 'an isosceles triangle': 1 };
+
+    const tasks = [
+        ['Is the dashed line a line of symmetry?', symmetric],
+        ['Name the shape drawn.', name],
+        ['How many sides does the shape have?', name === 'an isosceles triangle' ? 3 : 4],
+    ];
+    if (grade >= 3) tasks.push(['How many lines of symmetry does this shape have in total?', LINES[name]]);
+    if (grade >= 4) tasks.push(['If the shape were folded along the dashed line, would the halves match?', symmetric]);
+    if (grade >= 5) tasks.push(['What is the order of rotational symmetry of this shape?', ORDER[name]]);
+    if (grade >= 6) tasks.push(['Does this shape have any parallel sides?', name === 'an isosceles triangle' ? 'no' : 'yes']);
+
+    const [question, answer] = randomChoice(tasks);
 
     return {
-        question: 'Is the dashed line a line of symmetry?',
-        answer,
+        question,
+        answer: `${answer}`,
         figure: tikz(drawing),
     };
 }
 
 /** Parallel lines cut by a transversal. */
 function parallelLines(ctx) {
+    const grade = gradeOf(ctx);
     const angle = between(35, 70);
 
+    const tasks = [
+        ['The lines are parallel. Find the angle marked with a question mark.', `${180 - angle}°`],
+        [`The lines are parallel. Find the angle vertically opposite the ${angle}° angle.`, `${angle}°`],
+        [`The lines are parallel. Find the angle co-interior with the ${angle}° angle.`, `${180 - angle}°`],
+        [`The lines are parallel. Find the angle alternate to the ${angle}° angle.`, `${angle}°`],
+        [`The lines are parallel. Find the angle corresponding to the ${angle}° angle.`, `${angle}°`],
+    ];
+    if (grade >= 8) tasks.push(['Do co-interior angles between parallel lines add to 180° or 360°?', '180°']);
+    if (grade >= 8) tasks.push([`What is the supplement of the ${angle}° angle?`, `${180 - angle}°`]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: `The lines are parallel. Find the angle marked with a question mark.`,
-        answer: `${180 - angle}°`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (0,1.4) -- (3.2,1.4);\n  \\draw (0,0.2) -- (3.2,0.2);\n` +
             `  \\draw (0.5,-0.2) -- (2.7,1.8);\n` +
@@ -1752,9 +2215,22 @@ function scatterPlot(ctx) {
         return `  \\filldraw (${n(x * cell)},${n(y * cell)}) circle (1.5pt);`;
     }).join('\n');
 
+    const grade = gradeOf(ctx);
+    const tasks = [
+        ['Does this scatter plot show a positive, negative, or no correlation?', direction === 'none' ? 'no correlation' : `${direction} correlation`],
+        ['How many points are plotted?', 10],
+        ['Would a line of best fit rise, fall, or stay flat?', direction === 'positive' ? 'rise' : (direction === 'negative' ? 'fall' : 'stay roughly flat')],
+        ['As x increases, what generally happens to y?', direction === 'positive' ? 'it increases' : (direction === 'negative' ? 'it decreases' : 'it stays about the same')],
+    ];
+    if (grade >= 9) tasks.push(['Would the correlation coefficient here be near +1, near -1, or near 0?', direction === 'positive' ? 'near +1' : (direction === 'negative' ? 'near -1' : 'near 0')]);
+    if (grade >= 9) tasks.push(['Does this plot prove that x causes y?', 'no']);
+    if (grade >= 10) tasks.push(['Is estimating y beyond the plotted range interpolation or extrapolation?', 'extrapolation']);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'Does this scatter plot show a positive, negative, or no correlation?',
-        answer: direction === 'none' ? 'no correlation' : `${direction} correlation`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw[->] (0,0) -- (0,${n(max * cell + 0.3)});\n` +
             `  \\draw[->] (0,0) -- (${n(max * cell + 0.3)},0);\n${points}`
@@ -1785,9 +2261,23 @@ function treeDiagram(ctx) {
         });
     });
 
+    const grade = gradeOf(ctx);
+    const outcomes = first.length * second.length;
+    const tasks = [
+        ['How many possible outcomes does this tree diagram show?', outcomes],
+        ['How many branches leave the first stage?', first.length],
+        ['How many branches leave each first-stage branch?', second.length],
+        [`What is the probability of any one outcome, if all are equally likely?`, `1/${outcomes}`],
+    ];
+    if (grade >= 7) tasks.push(['If a third equally likely stage were added, how many outcomes would there be?', outcomes * second.length]);
+    if (grade >= 7) tasks.push(['Are the probabilities along one path multiplied or added?', 'multiplied']);
+    if (grade >= 8) tasks.push(['What do the probabilities of all the outcomes add to?', 1]);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'How many possible outcomes does this tree diagram show?',
-        answer: `${first.length * second.length}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(branches.join('\n')),
     };
 }
@@ -1799,11 +2289,22 @@ function vennDiagram(ctx) {
     const onlyB = between(3, 12);
     const neither = between(0, 5);
 
+    const grade = gradeOf(ctx);
+    const surveyed = onlyA + both + onlyB + neither;
+
     const tasks = [
-        ['How many are in both sets?', `${both}`],
-        ['How many are in set A in total?', `${onlyA + both}`],
-        ['How many were surveyed altogether?', `${onlyA + both + onlyB + neither}`],
+        ['How many are in both sets?', both],
+        ['How many are in set A in total?', onlyA + both],
+        ['How many are in set B in total?', onlyB + both],
+        ['How many were surveyed altogether?', surveyed],
+        ['How many are in set A but not set B?', onlyA],
+        ['How many are in neither set?', neither],
+        ['How many are in set A or set B or both?', onlyA + both + onlyB],
     ];
+    if (grade >= 8) tasks.push(['What is the probability a person chosen at random is in both sets?', simplify(both, surveyed)]);
+    if (grade >= 9) tasks.push(['What is the probability a person chosen at random is in neither set?', simplify(neither, surveyed)]);
+    if (grade >= 9) tasks.push(['Given a person is in set A, what is the probability they are also in set B?', simplify(both, onlyA + both)]);
+
     const [question, answer] = randomChoice(tasks);
 
     return {
@@ -1846,6 +2347,11 @@ function sequenceDots(ctx) {
         ['How many dots are in the next figure?', `${next}`],
         ['Is this sequence arithmetic or geometric?', geometric ? 'geometric' : 'arithmetic'],
         [geometric ? 'What is the common ratio?' : 'What is the common difference?', `${step}`],
+        ['How many dots are in the first figure shown?', `${counts[0]}`],
+        ['How many figures are shown?', `${counts.length}`],
+        ['How many dots are in the last figure shown?', `${counts[counts.length - 1]}`],
+        ['Is the number of dots increasing or decreasing?', 'increasing'],
+        ['How many dots are added between the first two figures?', `${counts[1] - counts[0]}`],
     ];
     const [question, answer] = randomChoice(tasks);
 
@@ -1888,6 +2394,13 @@ function complexPlane(ctx) {
     const tasks = [
         ['Write the complex number this point represents.', `${re} ${im < 0 ? '-' : '+'} ${Math.abs(im)}i`],
         ['Find the modulus of this complex number, to 2 decimal places.', `${Math.hypot(re, im).toFixed(2)}`],
+        ['What is the real part of this complex number?', `${re}`],
+        ['What is the imaginary part of this complex number?', `${im}`],
+        ['Write the conjugate of this complex number.', `${re} ${im < 0 ? '+' : '-'} ${Math.abs(im)}i`],
+        ['In which quadrant of the complex plane does this point lie?',
+            re > 0 && im > 0 ? 'the first' : (re < 0 && im > 0 ? 'the second' : (re < 0 && im < 0 ? 'the third' : 'the fourth'))],
+        ['Find the argument of this complex number, to the nearest degree.',
+            `${Math.round((Math.atan2(im, re) * 180) / Math.PI)}°`],
     ];
     const [question, answer] = randomChoice(tasks);
 
@@ -1916,8 +2429,18 @@ function areaUnderCurve(ctx) {
     for (let x = 0; x <= upper; x += 0.25) samples.push(`(${g(x)},${g(m * x)})`);
 
     return {
-        question: `Find the exact area under y = ${m}x from x = 0 to x = ${upper}.`,
-        answer: `${n(area)}`,
+        ...(() => {
+            const [question, answer] = randomChoice([
+                [`Find the exact area under y = ${m}x from x = 0 to x = ${upper}.`, n(area)],
+                [`Write the integral that gives the area under y = ${m}x from 0 to ${upper}.`, `the integral of ${m}x from 0 to ${upper}`],
+                [`Find the area under y = ${m}x from x = 0 to x = ${upper * 2}.`, n((m * upper * upper * 4) / 2)],
+                [`The region under y = ${m}x is a triangle. What are its base and height?`, `base ${upper}, height ${m * upper}`],
+                [`Find the antiderivative of ${m}x.`, `${simplify(m, 2)}x² + C`],
+                [`Doubling the upper limit multiplies this area by how much?`, 4],
+                [`Find the average value of y = ${m}x on the interval from 0 to ${upper}.`, n((m * upper) / 2)],
+            ]);
+            return { question, answer: `${answer}` };
+        })(),
         figure: tikz(
             `  \\fill[black!15] (0,0) -- (${g(upper)},0) -- (${g(upper)},${g(m * upper)}) -- cycle;\n` +
             `  \\draw[->] (0,0) -- (${g(upper + 1)},0) node[right,font=\\tiny] {$x$};\n` +
@@ -1937,8 +2460,19 @@ function optimizationBox(ctx) {
     const volume = cut * (sheet - 2 * cut) ** 2;
 
     return {
-        question: `Squares of side ${cut} are cut from the corners of this ${sheet} by ${sheet} sheet and the sides folded up. What is the volume of the open box?`,
-        answer: `${volume} cubic units`,
+        ...(() => {
+            const base = sheet - 2 * cut;
+            const [question, answer] = randomChoice([
+                [`Squares of side ${cut} are cut from the corners of this ${sheet} by ${sheet} sheet and the sides folded up. What is the volume of the open box?`, `${volume} cubic units`],
+                [`Squares of side ${cut} are cut from the corners of this ${sheet} by ${sheet} sheet. What are the base dimensions of the box?`, `${base} by ${base}`],
+                [`Squares of side ${cut} are cut from this ${sheet} by ${sheet} sheet. What is the height of the folded box?`, cut],
+                [`Write the volume of the box as a function of the cut size x, for a ${sheet} by ${sheet} sheet.`, `V = x(${sheet} - 2x)²`],
+                [`Squares of side ${cut} are cut from this ${sheet} by ${sheet} sheet. What is the area of the open box's base?`, `${base * base} square units`],
+                [`For a ${sheet} by ${sheet} sheet, what is the largest cut size that still leaves a box?`, `just under ${sheet / 2}`],
+                [`Squares of side ${cut} are cut from this ${sheet} by ${sheet} sheet. How much card is cut away in total?`, `${4 * cut * cut} square units`],
+            ]);
+            return { question, answer: `${answer}` };
+        })(),
         figure: tikz(
             `  \\draw (0,0) rectangle (${n(sheet * s)},${n(sheet * s)});\n` +
             `  \\draw (0,0) rectangle (${n(cut * s)},${n(cut * s)});\n` +
@@ -1956,8 +2490,17 @@ function ladderSlide(ctx) {
     const s = n(2.6 / c);
 
     return {
-        question: `A ${c} m ladder leans against a wall with its foot ${b} m from the base. How far up the wall does it reach?`,
-        answer: `${a} m`,
+        ...(() => {
+            const [question, answer] = randomChoice([
+                [`A ${c} m ladder leans against a wall with its foot ${b} m from the base. How far up the wall does it reach?`, `${a} m`],
+                [`A ${c} m ladder reaches ${a} m up a wall. How far is its foot from the base?`, `${b} m`],
+                [`A ladder reaches ${a} m up a wall with its foot ${b} m out. How long is the ladder?`, `${c} m`],
+                [`A ${c} m ladder has its foot ${b} m from the wall. What angle does it make with the ground, to the nearest degree?`, `${Math.round((Math.acos(b / c) * 180) / Math.PI)}°`],
+                [`As the foot of the ladder slides away from the wall, does the top move up or down?`, 'down'],
+                [`A ${c} m ladder leans with its foot ${b} m out. What is the area of the triangle it forms with the wall and ground?`, `${n((a * b) / 2)} square metres`],
+            ]);
+            return { question, answer: `${answer}` };
+        })(),
         figure: tikz(
             `  \\draw[line width=0.9pt] (0,0) -- (0,${n(a * s * 1.6)});\n` +
             `  \\draw (0,0) -- (${n(b * s * 1.6)},0);\n` +
@@ -1981,9 +2524,22 @@ function priceCompare(ctx) {
     const perA = priceA / countA;
     const perB = priceB / countB;
 
+    const grade = gradeOf(ctx);
+    const tasks = [
+        ['Which package is the better value per item?', perA < perB ? `the pack of ${countA}` : `the pack of ${countB}`],
+        [`What is the unit price of the pack of ${countA}?`, `$${n(Math.round(perA * 100) / 100)}`],
+        [`What is the unit price of the pack of ${countB}?`, `$${n(Math.round(perB * 100) / 100)}`],
+        [`What do the two packages cost together?`, `$${n(Math.round((priceA + priceB) * 100) / 100)}`],
+    ];
+    if (grade >= 6) tasks.push(['How much is saved per item by buying the better value pack?', `$${n(Math.round(Math.abs(perA - perB) * 100) / 100)}`]);
+    if (grade >= 7) tasks.push([`What would ${countB} items cost at the smaller pack's unit price?`, `$${n(Math.round(perA * countB * 100) / 100)}`]);
+    if (grade >= 8) tasks.push(['Why can a larger pack still be poor value?', 'the unit price can be higher']);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: 'Which package is the better value per item?',
-        answer: perA < perB ? `the pack of ${countA}` : `the pack of ${countB}`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\draw (0,0) rectangle (1.5,1.1);\n` +
             `  \\node[font=\\tiny] at (0.75,0.72) {${countA} items};\n` +
@@ -2032,8 +2588,20 @@ function interestBars(ctx) {
     ).join('\n');
 
     return {
-        question: `$${principal} is invested at ${rate}% ${compound ? 'compounded annually' : 'simple interest'}. What is it worth after ${years} years?`,
-        answer: `$${value(years).toFixed(2)}`,
+        ...(() => {
+            const kind = compound ? 'compounded annually' : 'simple interest';
+            const [question, answer] = randomChoice([
+                [`$${principal} is invested at ${rate}% ${kind}. What is it worth after ${years} years?`, `$${value(years).toFixed(2)}`],
+                [`$${principal} is invested at ${rate}% ${kind}. How much interest is earned in ${years} years?`, `$${(value(years) - principal).toFixed(2)}`],
+                [`$${principal} is invested at ${rate}% ${kind}. What is it worth after 1 year?`, `$${value(1).toFixed(2)}`],
+                [`$${principal} is invested at ${rate}% ${kind}. What is it worth after 2 years?`, `$${value(2).toFixed(2)}`],
+                [`What amount was invested at the start?`, `$${principal}`],
+                [`Does this graph show simple or compound interest?`, compound ? 'compound' : 'simple'],
+                [`$${principal} grows at ${rate}% a year. What is the annual growth factor?`, n(1 + rate / 100)],
+                [`Do the bars grow by an equal amount each year, or by an increasing amount?`, compound ? 'an increasing amount' : 'an equal amount'],
+            ]);
+            return { question, answer: `${answer}` };
+        })(),
         figure: tikz(
             `  \\draw[->] (0,0) -- (0,${n(top * unit + 0.35)});\n` +
             `  \\draw[->] (0,0) -- (${n((years + 1) * 0.62 + 0.3)},0);\n${bars}`
@@ -2048,9 +2616,22 @@ function currencyBars(ctx) {
     const rate = Number((Math.random() * 0.22 + 0.68).toFixed(2));
     const amount = between(20, 200);
 
+    const grade = gradeOf(ctx);
+    const tasks = [
+        [`The bar shows the exchange rate. Convert ${amount} CAD to USD.`, `${(amount * rate).toFixed(2)} USD`],
+        [`The bar shows the exchange rate. Convert ${amount} USD to CAD.`, `${(amount / rate).toFixed(2)} CAD`],
+        ['What does one Canadian dollar buy in US dollars?', `${rate} USD`],
+        ['Is the Canadian dollar worth more or less than the US dollar here?', rate < 1 ? 'less' : 'more'],
+    ];
+    if (grade >= 8) tasks.push(['How many Canadian dollars buy one US dollar?', `${n(Math.round((1 / rate) * 100) / 100)} CAD`]);
+    if (grade >= 9) tasks.push([`Converting ${amount} CAD to USD and back, what do you end with?`, `${amount} CAD`]);
+    if (grade >= 9) tasks.push([`If the rate rose to ${n(Math.round(rate * 1.1 * 100) / 100)}, would ${amount} CAD buy more or fewer USD?`, 'more']);
+
+    const [question, answer] = randomChoice(tasks);
+
     return {
-        question: `The bar shows the exchange rate. Convert ${amount} CAD to USD.`,
-        answer: `${(amount * rate).toFixed(2)} USD`,
+        question,
+        answer: `${answer}`,
         figure: tikz(
             `  \\fill[black!15,draw=black] (0,0.55) rectangle (3.0,1.0);\n` +
             `  \\node[font=\\tiny] at (1.5,0.775) {1.00 CAD};\n` +
@@ -2070,13 +2651,13 @@ function currencyBars(ctx) {
  * asked about as a function.
  */
 ratioTape.heightMm = 14;
-ratioTape.grades = [5, 10];
+ratioTape.grades = [5, 12];
 factorTree.heightMm = 22;
 factorTree.grades = [4, 9];
 squareRootArea.heightMm = 22;
-squareRootArea.grades = [6, 10];
+squareRootArea.grades = [6, 12];
 operationChain.heightMm = 14;
-operationChain.grades = [3, 9];
+operationChain.grades = [3, 12];
 tapeDiagram.heightMm = 16;
 tapeDiagram.grades = [2, 8];
 unitLadder.heightMm = 24;
@@ -2094,7 +2675,7 @@ codingFlow.grades = [1, 9];
 polygonAngles.heightMm = 24;
 polygonAngles.grades = [3, 10];
 similarTriangles.heightMm = 20;
-similarTriangles.grades = [7, 11];
+similarTriangles.grades = [7, 12];
 symmetryShape.heightMm = 20;
 symmetryShape.grades = [2, 8];
 parallelLines.heightMm = 24;
@@ -2132,7 +2713,7 @@ placeValueBlocks.grades = [1, 4];
 dotArray.heightMm = 18;
 dotArray.grades = [2, 5];
 numberLine.heightMm = 13;
-numberLine.grades = [1, 9];
+numberLine.grades = [1, 12];
 hundredGrid.heightMm = 22;
 hundredGrid.grades = [4, 8];
 fractionBar.heightMm = 10;
@@ -2144,7 +2725,7 @@ growingPattern.grades = [3, 9];
 ruler.heightMm = 12;
 ruler.grades = [1, 6];
 thermometer.heightMm = 40;
-thermometer.grades = [3, 8];
+thermometer.grades = [3, 9];
 clock.heightMm = 26;
 clock.grades = [1, 6];
 beaker.heightMm = 32;
@@ -2156,7 +2737,7 @@ rectangleMeasure.grades = [3, 9];
 compositeShape.heightMm = 22;
 compositeShape.grades = [4, 10];
 solidVolume.heightMm = 22;
-solidVolume.grades = [5, 11];
+solidVolume.grades = [5, 12];
 rightTriangle.heightMm = 22;
 rightTriangle.grades = [8, 12];
 angleMeasure.heightMm = 22;
@@ -2164,7 +2745,7 @@ angleMeasure.grades = [4, 10];
 circleMeasure.heightMm = 28;
 circleMeasure.grades = [7, 12];
 coordinateGrid.heightMm = 26;
-coordinateGrid.grades = [5, 10];
+coordinateGrid.grades = [5, 12];
 transformation.heightMm = 28;
 transformation.grades = [3, 10];
 barGraph.heightMm = 30;
@@ -2186,7 +2767,7 @@ inequalityLine.grades = [7, 12];
 linearGraph.heightMm = 34;
 linearGraph.grades = [8, 12];
 trigTriangle.heightMm = 24;
-trigTriangle.grades = [10, 12];
+trigTriangle.grades = [9, 12];
 unitCircle.heightMm = 30;
 unitCircle.grades = [11, 12];
 sineWave.heightMm = 32;
@@ -2208,6 +2789,636 @@ coins.grades = [1, 6];
 budgetPie.heightMm = 36;
 budgetPie.grades = [7, 12];
 
+/* ------------------------------------------------- junior shape figures */
+
+/** The outline of one named 2-D shape, for naming and counting its parts. */
+function shapeOutline(ctx) {
+    const grade = gradeOf(ctx);
+    const SHAPES = [
+        { name: 'triangle', sides: 3 },
+        { name: 'square', sides: 4 },
+        { name: 'rectangle', sides: 4 },
+        { name: 'pentagon', sides: 5 },
+        { name: 'hexagon', sides: 6 },
+        { name: 'octagon', sides: 8 },
+    ];
+    const shape = randomChoice(grade <= 2 ? SHAPES.slice(0, 4) : SHAPES);
+
+    let body;
+    if (shape.name === 'rectangle') {
+        body = '  \\draw[line width=0.7pt] (0,0) rectangle (2.0,1.1);';
+    } else if (shape.name === 'square') {
+        body = '  \\draw[line width=0.7pt] (0,0) rectangle (1.3,1.3);';
+    } else {
+        const points = Array.from({ length: shape.sides }, (_, i) => {
+            const angle = 90 + (360 / shape.sides) * i;
+            return `(${n(0.75 * Math.cos(rad(angle)))},${n(0.75 * Math.sin(rad(angle)))})`;
+        }).join(' -- ');
+        body = `  \\draw[line width=0.7pt] ${points} -- cycle;`;
+    }
+
+    const tasks = [
+        ['Name this shape.', shape.name],
+        ['How many sides does this shape have?', shape.sides],
+        ['How many corners does this shape have?', shape.sides],
+        ['Are all the sides of this shape straight?', 'yes'],
+        ['Is this shape open or closed?', 'closed'],
+        ['Count the sides. Is that number odd or even?', shape.sides % 2 === 0 ? 'even' : 'odd'],
+        ['How many sides would two of these shapes have altogether?', shape.sides * 2],
+    ];
+    if (grade >= 2) tasks.push(['Does this shape have any curved sides?', 'no']);
+    if (grade >= 2) tasks.push(['How many more sides does this shape have than a triangle?', shape.sides - 3]);
+    if (grade >= 3) tasks.push(['How many lines of symmetry does this regular shape have?', shape.name === 'rectangle' ? 2 : shape.sides]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(body) };
+}
+
+/** A row of small shapes to count and sort. */
+function shapeSort(ctx) {
+    const grade = gradeOf(ctx);
+    const triangles = between(2, 4);
+    const squares = between(2, 4);
+    const circles = between(1, 3);
+
+    const parts = [];
+    let x = 0;
+    for (let i = 0; i < triangles; i += 1, x += 0.85) {
+        parts.push(`  \\draw (${n(x)},0) -- (${n(x + 0.6)},0) -- (${n(x + 0.3)},0.55) -- cycle;`);
+    }
+    for (let i = 0; i < squares; i += 1, x += 0.85) {
+        parts.push(`  \\draw (${n(x)},0) rectangle (${n(x + 0.55)},0.55);`);
+    }
+    for (let i = 0; i < circles; i += 1, x += 0.85) {
+        parts.push(`  \\draw (${n(x + 0.28)},0.28) circle (0.28);`);
+    }
+
+    const total = triangles + squares + circles;
+    const most = triangles >= squares && triangles >= circles ? 'triangles'
+        : (squares >= circles ? 'squares' : 'circles');
+
+    const tasks = [
+        ['How many triangles are there?', triangles],
+        ['How many squares are there?', squares],
+        ['How many circles are there?', circles],
+        ['How many shapes are there altogether?', total],
+        ['Which shape appears most often?', most],
+        ['How many shapes have straight sides?', triangles + squares],
+        ['How many shapes have no corners?', circles],
+        ['Are there more squares or circles?', squares > circles ? 'squares' : (circles > squares ? 'circles' : 'the same number')],
+    ];
+    if (grade >= 2) tasks.push(['How many more triangles than circles are there?', triangles - circles]);
+    if (grade >= 2) tasks.push(['How many corners are there on all the triangles together?', triangles * 3]);
+    if (grade >= 3) tasks.push(['How many sides are there on all the squares together?', squares * 4]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(parts.join('\n')) };
+}
+
+/** A simple 3-D solid drawn in outline, for naming faces, edges and vertices. */
+function solidOutline(ctx) {
+    const grade = gradeOf(ctx);
+    const SOLIDS = [
+        { name: 'cube', faces: 6, edges: 12, vertices: 8, rolls: 'no' },
+        { name: 'cylinder', faces: 3, edges: 2, vertices: 0, rolls: 'yes' },
+        { name: 'cone', faces: 2, edges: 1, vertices: 1, rolls: 'yes' },
+        { name: 'square pyramid', faces: 5, edges: 8, vertices: 5, rolls: 'no' },
+    ];
+    const solid = randomChoice(grade <= 2 ? SOLIDS.slice(0, 3) : SOLIDS);
+
+    let body;
+    if (solid.name === 'cube') {
+        body = '  \\draw (0,0) rectangle (1.2,1.2);\n'
+            + '  \\draw (0,1.2) -- (0.4,1.55) -- (1.6,1.55) -- (1.2,1.2);\n'
+            + '  \\draw (1.2,0) -- (1.6,0.35) -- (1.6,1.55);';
+    } else if (solid.name === 'cylinder') {
+        body = '  \\draw (0,0.25) ellipse (0.6 and 0.25);\n'
+            + '  \\draw (-0.6,0.25) -- (-0.6,1.5);\n  \\draw (0.6,0.25) -- (0.6,1.5);\n'
+            + '  \\draw (0,1.5) ellipse (0.6 and 0.25);';
+    } else if (solid.name === 'cone') {
+        body = '  \\draw (0,0.25) ellipse (0.6 and 0.25);\n'
+            + '  \\draw (-0.6,0.25) -- (0,1.6) -- (0.6,0.25);';
+    } else {
+        body = '  \\draw (0,0) -- (1.4,0) -- (1.8,0.4) -- (0.4,0.4) -- cycle;\n'
+            + '  \\draw (0,0) -- (0.9,1.5) -- (1.4,0);\n  \\draw (0.4,0.4) -- (0.9,1.5) -- (1.8,0.4);';
+    }
+
+    const tasks = [
+        ['Name this solid.', solid.name],
+        ['How many faces does this solid have?', solid.faces],
+        ['Is this a flat shape or a solid?', 'a solid'],
+        ['Does this solid have any flat faces?', 'yes'],
+        ['Could you stack another one of these on top?', solid.rolls === 'yes' ? 'no' : 'yes'],
+    ];
+    if (grade >= 2) tasks.push(['Would this solid roll?', solid.rolls]);
+    if (grade >= 3) tasks.push(['How many edges does this solid have?', solid.edges]);
+    if (grade >= 3) tasks.push(['How many vertices does this solid have?', solid.vertices]);
+    if (grade >= 4) tasks.push(['How many faces and vertices does it have in total?', solid.faces + solid.vertices]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(body) };
+}
+
+/** A repeating shape pattern, for saying what comes next. */
+function shapePattern(ctx) {
+    const grade = gradeOf(ctx);
+    const NAMES = ['circle', 'square', 'triangle'];
+    const unit = between(2, 3);
+    const order = NAMES.slice(0, unit);
+    const shown = unit * 2 + between(1, unit);
+
+    const parts = [];
+    for (let i = 0; i < shown; i += 1) {
+        const kind = order[i % unit];
+        const x = i * 0.72;
+        if (kind === 'circle') parts.push(`  \\draw (${n(x + 0.25)},0.25) circle (0.25);`);
+        else if (kind === 'square') parts.push(`  \\draw (${n(x)},0) rectangle (${n(x + 0.5)},0.5);`);
+        else parts.push(`  \\draw (${n(x)},0) -- (${n(x + 0.5)},0) -- (${n(x + 0.25)},0.5) -- cycle;`);
+    }
+    parts.push(`  \\node at (${n(shown * 0.72 + 0.25)},0.25) {?};`);
+
+    const next = order[shown % unit];
+    const tasks = [
+        ['What shape comes next in the pattern?', next],
+        ['How many shapes repeat before the pattern starts again?', unit],
+        ['How many shapes are shown before the question mark?', shown],
+        ['What shape does the pattern start with?', order[0]],
+        ['Name the shapes in one repeat of the pattern, in order.', order.join(', ')],
+        ['Does this pattern repeat or grow?', 'it repeats'],
+    ];
+    if (grade >= 2) tasks.push(['What shape would be 2 places after the question mark?', order[(shown + 2) % unit]]);
+    if (grade >= 3) tasks.push([`How many complete repeats are shown?`, Math.floor(shown / unit)]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(parts.join('\n')) };
+}
+
+/* ------------------------------------------------ junior money figures */
+
+/** A price tag, for totals and change. */
+function priceTag(ctx) {
+    const grade = gradeOf(ctx);
+    const dollars = between(1, grade <= 2 ? 5 : 9);
+    const cents = grade <= 2 ? 0 : randomChoice([25, 50, 75, 99]);
+    const price = n(dollars + cents / 100);
+    const label = cents === 0 ? `${dollars}.00` : `${dollars}.${String(cents).padStart(2, '0')}`;
+
+    const body = '  \\draw[line width=0.7pt] (0,0) -- (1.9,0) -- (1.9,0.9) -- (0,0.9) -- cycle;\n'
+        + '  \\draw (0.25,0.72) circle (0.07);\n'
+        + `  \\node[font=\\small] at (1.05,0.4) {$\\mathdollar ${label}$};`;
+
+    const tasks = [
+        ['What does this item cost?', `$${label}`],
+        ['What do two of these cost?', `$${n(price * 2)}`],
+        ['How many whole dollars does this item cost?', dollars],
+        [`Is this item more or less than $${dollars + 1}?`, 'less'],
+        ['Which costs more, this item or one costing $1?', dollars >= 1 ? 'this item' : 'the $1 item'],
+    ];
+    if (grade >= 2) tasks.push([`How much change from $${dollars + 1}?`, `$${n(dollars + 1 - price)}`]);
+    if (grade >= 3) tasks.push(['What do three of these cost?', `$${n(price * 3)}`]);
+    if (grade >= 4) tasks.push(['Rounded to the nearest dollar, what does this cost?', `$${Math.round(price)}`]);
+    if (grade >= 5) tasks.push(['What do these cost with 13% tax added?', `$${n(Math.round(price * 1.13 * 100) / 100)}`]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(body) };
+}
+
+/** A savings jar filled to a level, for part-of-a-goal questions. */
+function savingsJar(ctx) {
+    const grade = gradeOf(ctx);
+    const goal = randomChoice(grade <= 3 ? [10, 20] : [20, 50, 100]);
+    const parts = between(1, 4);
+    const saved = n((goal * parts) / 4);
+    const fill = n((parts / 4) * 1.5);
+
+    const body = '  \\draw[line width=0.7pt] (0,0) rectangle (1.1,1.6);\n'
+        + `  \\fill[black!20] (0.03,0.03) rectangle (1.07,${n(Math.max(0.06, fill))});\n`
+        + `  \\draw (0,${n(Math.max(0.06, fill))}) -- (1.1,${n(Math.max(0.06, fill))});\n`
+        + `  \\node[font=\\tiny,below] at (0.55,0) {goal $\\mathdollar ${goal}$};`;
+
+    const tasks = [
+        ['How much has been saved?', `$${saved}`],
+        ['How much more is needed to reach the goal?', `$${n(goal - saved)}`],
+        ['What is the savings goal?', `$${goal}`],
+        ['Has more or less than half the goal been saved?', saved > goal / 2 ? 'more' : (saved < goal / 2 ? 'less' : 'exactly half')],
+        ['Is the jar full?', saved === goal ? 'yes' : 'no'],
+    ];
+    if (grade >= 3) tasks.push(['What fraction of the goal has been saved?', simplify(parts, 4)]);
+    if (grade >= 4) tasks.push(['What percent of the goal has been saved?', `${n((parts / 4) * 100)}%`]);
+    if (grade >= 5) tasks.push(['At $5 a week, how many weeks to reach the goal?', Math.ceil((goal - saved) / 5)]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(body) };
+}
+
+/* --------------------------------------------------- senior number line */
+
+/** A number line carrying irrational points, for ordering and estimating. */
+function realNumberLine(ctx) {
+    const marks = [
+        { label: '\\sqrt{2}', value: Math.SQRT2, kind: 'irrational' },
+        { label: '\\pi', value: Math.PI, kind: 'irrational' },
+        { label: '\\sqrt{9}', value: 3, kind: 'rational' },
+        { label: '\\tfrac{5}{2}', value: 2.5, kind: 'rational' },
+    ];
+    const chosen = randomChoice(marks);
+    const unit = 1.5;
+
+    const ticks = Array.from({ length: 5 }, (_, i) =>
+        `\\draw (${n(i * unit)},0.1) -- (${n(i * unit)},-0.1) node[below,font=\\tiny] {$${i}$};`
+    ).join('\n  ');
+
+    const at = n(chosen.value * unit);
+    const body = `  \\draw[<->] (-0.3,0) -- (${n(4 * unit + 0.4)},0);\n  ${ticks}\n`
+        + `  \\draw[->,line width=0.9pt] (${at},0.75) -- (${at},0.13);\n`
+        + `  \\node[above,font=\\small] at (${at},0.75) {$${chosen.label}$};`;
+
+    const tasks = [
+        [`Between which two whole numbers does $${chosen.label}$ lie?`, `${Math.floor(chosen.value)} and ${Math.ceil(chosen.value)}`],
+        [`Is $${chosen.label}$ rational or irrational?`, chosen.kind],
+        [`Estimate $${chosen.label}$ to one decimal place.`, n(Math.round(chosen.value * 10) / 10)],
+        [`Which whole number is $${chosen.label}$ closest to?`, Math.round(chosen.value)],
+        [`Is $${chosen.label}$ greater or less than 2.5?`, chosen.value > 2.5 ? 'greater' : (chosen.value < 2.5 ? 'less' : 'equal')],
+    ];
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(body) };
+}
+
+/* --------------------------------------------------- senior trigonometry */
+
+/** A bearing from a north line, for direction and distance work. */
+function bearingDiagram(ctx) {
+    const bearing = randomChoice([35, 60, 120, 145, 210, 240, 315]);
+    const distance = between(4, 30);
+    const angle = 90 - bearing;
+    const x = n(1.3 * Math.cos(rad(angle)));
+    const y = n(1.3 * Math.sin(rad(angle)));
+
+    const body = '  \\draw[->] (0,0) -- (0,1.5) node[above,font=\\tiny] {N};\n'
+        + '  \\draw[dashed] (0,0) -- (1.5,0);\n'
+        + `  \\draw[->,line width=0.9pt] (0,0) -- (${x},${y});\n`
+        + `  \\draw (0,0.55) arc (90:${n(angle)}:0.55);\n`
+        + `  \\node[font=\\tiny] at (${n(0.42 * Math.cos(rad((90 + angle) / 2)))},${n(0.42 * Math.sin(rad((90 + angle) / 2)))}) {${bearing}$^{\\circ}$};`;
+
+    const quadrant = bearing < 90 ? 'north-east' : (bearing < 180 ? 'south-east' : (bearing < 270 ? 'south-west' : 'north-west'));
+    const tasks = [
+        ['What is the bearing shown?', `${bearing}°`],
+        ['In which general direction does the arrow point?', quadrant],
+        ['What is the back bearing of this direction?', `${(bearing + 180) % 360}°`],
+        [`A boat travels ${distance} km on this bearing. How far north does it go, to two decimals?`, `${n(Math.round(distance * Math.cos(rad(bearing)) * 100) / 100)} km`],
+        [`A boat travels ${distance} km on this bearing. How far east does it go, to two decimals?`, `${n(Math.round(distance * Math.sin(rad(bearing)) * 100) / 100)} km`],
+    ];
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(body) };
+}
+
+/** A labelled non-right triangle, for the sine and cosine laws. */
+function obliqueTriangle(ctx) {
+    const angleA = between(35, 70);
+    const angleB = between(35, 110 - angleA + 30);
+    const angleC = 180 - angleA - angleB;
+    const sideA = between(5, 14);
+    const sideB = n(Math.round(((sideA * Math.sin(rad(angleB))) / Math.sin(rad(angleA))) * 100) / 100);
+
+    const body = '  \\draw[line width=0.7pt] (0,0) -- (2.6,0) -- (1.1,1.4) -- cycle;\n'
+        + `  \\node[below,font=\\tiny] at (1.3,0) {$c$};\n`
+        + `  \\node[left,font=\\tiny] at (0.5,0.75) {$b = ${sideB}$};\n`
+        + `  \\node[right,font=\\tiny] at (1.95,0.75) {$a = ${sideA}$};\n`
+        + `  \\node[above right,font=\\tiny] at (0,0) {${angleA}$^{\\circ}$};\n`
+        + `  \\node[above left,font=\\tiny] at (2.6,0) {${angleB}$^{\\circ}$};`;
+
+    const tasks = [
+        ['Find the third angle of this triangle.', `${angleC}°`],
+        ['Which side of this triangle is the longest?', `the one opposite ${Math.max(angleA, angleB, angleC)}°`],
+        ['Is this triangle acute, right or obtuse?', Math.max(angleA, angleB, angleC) > 90 ? 'obtuse' : (Math.max(angleA, angleB, angleC) === 90 ? 'right' : 'acute')],
+        ['Which law finds side c from these two angles and a side?', 'the sine law'],
+        [`Find side c using the sine law, to two decimals.`, n(Math.round(((sideA * Math.sin(rad(angleC))) / Math.sin(rad(angleA))) * 100) / 100)],
+        [`Find the area of this triangle from two sides and the angle between them, to two decimals.`, n(Math.round(0.5 * sideA * sideB * Math.sin(rad(angleC)) * 100) / 100)],
+    ];
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(body) };
+}
+
+/* ------------------------------------------------------ senior calculus */
+
+/** A curve with marked turning points, read for the sign of the derivative. */
+function slopeSketch(ctx) {
+    const body = '  \\draw[->] (-0.2,0) -- (3.4,0) node[right,font=\\tiny] {$x$};\n'
+        + '  \\draw[->] (0,-1.0) -- (0,1.3) node[above,font=\\tiny] {$y$};\n'
+        + '  \\draw[line width=0.8pt,domain=0.2:3.1,samples=60,smooth] plot (\\x,{0.9*sin(\\x r)});\n'
+        + '  \\fill (1.571,0.9) circle (0.05) node[above,font=\\tiny] {$A$};\n'
+        + '  \\fill (3.1,0.037) circle (0.05) node[above right,font=\\tiny] {$B$};';
+
+    const tasks = [
+        ['At point A, is the slope of the curve positive, negative or zero?', 'zero'],
+        ['Is the curve increasing or decreasing just before point A?', 'increasing'],
+        ['Is the curve increasing or decreasing just after point A?', 'decreasing'],
+        ['What kind of point is A?', 'a local maximum'],
+        ['At point B, is the derivative positive or negative?', 'negative'],
+        ['Where on this curve does the derivative equal zero?', 'at point A'],
+    ];
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(body) };
+}
+
+/* ---------------------------------------------------- scale and measure */
+
+/** A scale drawing with its scale marked, for converting to real lengths. */
+function scaleDrawing(ctx) {
+    const scale = randomChoice([10, 20, 50, 100]);
+    const drawn = between(2, 6);
+    const wide = between(2, 5);
+
+    const body = `  \\draw[line width=0.7pt] (0,0) rectangle (${n(drawn * 0.4)},${n(wide * 0.4)});\n`
+        + `  \\node[below,font=\\tiny] at (${n(drawn * 0.2)},0) {${drawn} cm};\n`
+        + `  \\node[right,font=\\tiny] at (${n(drawn * 0.4)},${n(wide * 0.2)}) {${wide} cm};\n`
+        + `  \\node[font=\\tiny] at (${n(drawn * 0.2)},${n(wide * 0.4 + 0.28)}) {scale 1 : ${scale}};`;
+
+    const tasks = [
+        [`What real length does the ${drawn} cm side represent, in centimetres?`, `${drawn * scale} cm`],
+        [`What real length does the ${drawn} cm side represent, in metres?`, `${n((drawn * scale) / 100)} m`],
+        [`What real length does the ${wide} cm side represent, in metres?`, `${n((wide * scale) / 100)} m`],
+        ['What is the scale factor of this drawing?', scale],
+        [`What is the real area, in square metres?`, `${n(((drawn * scale) / 100) * ((wide * scale) / 100))} m²`],
+        [`A real length of ${scale * 2} cm is how long on this drawing?`, '2 cm'],
+    ];
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer, figure: tikz(body) };
+}
+
+shapeOutline.heightMm = 18;
+shapeOutline.grades = [1, 5];
+shapeSort.heightMm = 12;
+shapeSort.grades = [1, 4];
+solidOutline.heightMm = 20;
+solidOutline.grades = [1, 6];
+shapePattern.heightMm = 11;
+shapePattern.grades = [1, 4];
+priceTag.heightMm = 13;
+priceTag.grades = [1, 6];
+savingsJar.heightMm = 22;
+savingsJar.grades = [1, 6];
+realNumberLine.heightMm = 16;
+realNumberLine.grades = [8, 12];
+bearingDiagram.heightMm = 22;
+bearingDiagram.grades = [10, 12];
+obliqueTriangle.heightMm = 22;
+obliqueTriangle.grades = [10, 12];
+slopeSketch.heightMm = 26;
+slopeSketch.grades = [11, 12];
+scaleDrawing.heightMm = 22;
+scaleDrawing.grades = [5, 10];
+
+/** A domino, for number bonds and doubles. */
+function dominoDots(ctx) {
+    const grade = gradeOf(ctx);
+    const left = between(1, 6);
+    const right = between(1, 6);
+
+    const pips = (count, offset) => {
+        const spots = {
+            1: [[0.5, 0.5]],
+            2: [[0.25, 0.75], [0.75, 0.25]],
+            3: [[0.25, 0.75], [0.5, 0.5], [0.75, 0.25]],
+            4: [[0.25, 0.25], [0.25, 0.75], [0.75, 0.25], [0.75, 0.75]],
+            5: [[0.25, 0.25], [0.25, 0.75], [0.5, 0.5], [0.75, 0.25], [0.75, 0.75]],
+            6: [[0.25, 0.2], [0.25, 0.5], [0.25, 0.8], [0.75, 0.2], [0.75, 0.5], [0.75, 0.8]],
+        }[count];
+        return spots.map(([x, y]) => `  \\filldraw (${n(offset + x)},${n(y)}) circle (1.7pt);`).join('\n');
+    };
+
+    const body = '  \\draw (0,0) rectangle (2,1);\n  \\draw (1,0) -- (1,1);\n'
+        + `${pips(left, 0)}\n${pips(right, 1)}`;
+
+    const tasks = [
+        ['How many dots are on this domino altogether?', left + right],
+        ['How many dots are on the left half?', left],
+        ['How many dots are on the right half?', right],
+        ['How many more dots are on the side with more?', Math.abs(left - right)],
+        ['Do both halves have the same number of dots?', left === right ? 'yes' : 'no'],
+    ];
+    if (grade >= 2) tasks.push(['Write an addition sentence for this domino.', `${left} + ${right} = ${left + right}`]);
+    if (grade >= 2) tasks.push(['Is the total number of dots odd or even?', (left + right) % 2 === 0 ? 'even' : 'odd']);
+    if (grade >= 3) tasks.push(['How many more dots would make 12 in all?', 12 - (left + right)]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer: `${answer}`, figure: tikz(body) };
+}
+
+/** Equal groups of counters, for early multiplication and sharing. */
+function equalGroups(ctx) {
+    const grade = gradeOf(ctx);
+    const groups = between(2, 4);
+    const each = between(2, 5);
+
+    const parts = [];
+    for (let g = 0; g < groups; g += 1) {
+        const x = g * 1.15;
+        parts.push(`  \\draw (${n(x)},0) ellipse (0.45 and 0.35);`);
+        for (let i = 0; i < each; i += 1) {
+            const a = rad((360 / each) * i + 90);
+            parts.push(`  \\filldraw (${n(x + 0.24 * Math.cos(a))},${n(0.18 * Math.sin(a))}) circle (1.5pt);`);
+        }
+    }
+
+    const tasks = [
+        ['How many groups are there?', groups],
+        ['How many counters are in each group?', each],
+        ['How many counters are there altogether?', groups * each],
+        ['How many counters would two of these groups hold?', each * 2],
+    ];
+    if (grade >= 2) tasks.push(['Write the multiplication fact this picture shows.', `${groups} × ${each} = ${groups * each}`]);
+    if (grade >= 2) tasks.push(['Write the repeated addition this picture shows.', Array(groups).fill(each).join(' + ')]);
+    if (grade >= 3) tasks.push([`If ${groups * each} counters are shared into ${groups} equal groups, how many in each?`, each]);
+    if (grade >= 3) tasks.push([`How many groups of ${each} make ${groups * each}?`, groups]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer: `${answer}`, figure: tikz(parts.join('\n')) };
+}
+
+/** A month laid out as a calendar grid, for days, weeks and dates. */
+function calendarMonth(ctx) {
+    const grade = gradeOf(ctx);
+    const days = randomChoice([28, 30, 31]);
+    const startColumn = between(0, 6);
+    const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    const cells = [];
+    for (let d = 1; d <= days; d += 1) {
+        const index = startColumn + d - 1;
+        const column = index % 7;
+        const row = Math.floor(index / 7);
+        cells.push(`  \\node[font=\\tiny] at (${n(column * 0.42)},${n(-row * 0.34)}) {${d}};`);
+    }
+    const header = DAY_NAMES.map((name, i) =>
+        `  \\node[font=\\tiny] at (${n(i * 0.42)},0.4) {${name[0]}};`
+    ).join('\n');
+
+    const asked = between(1, days);
+    const dayOfAsked = DAY_NAMES[(startColumn + asked - 1) % 7];
+
+    const tasks = [
+        ['How many days are in this month?', days],
+        [`What day of the week is the ${asked}th?`, dayOfAsked],
+        ['What day of the week does this month start on?', DAY_NAMES[startColumn]],
+        ['How many days are in one week?', 7],
+    ];
+    if (grade >= 2) tasks.push([`What is the date one week after the ${asked}th?`, asked + 7 <= days ? `the ${asked + 7}th` : 'it falls in the next month']);
+    if (grade >= 2) tasks.push(['How many complete weeks are in this month?', Math.floor(days / 7)]);
+    if (grade >= 3) tasks.push([`How many days are left in the month after the ${asked}th?`, days - asked]);
+    if (grade >= 3) tasks.push([`How many ${DAY_NAMES[startColumn]}s are in this month?`, Math.floor((days - 1) / 7) + 1]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer: `${answer}`, figure: tikz(`${header}\n${cells.join('\n')}`) };
+}
+
+/** Bills and coins in a purse, for counting money past a dollar. */
+function moneyPurse(ctx) {
+    const grade = gradeOf(ctx);
+    const bills = between(1, 3);
+    const billValue = randomChoice([5, 10]);
+    const coins = between(1, 4);
+    const coinValue = randomChoice([10, 25]);
+    const total = bills * billValue * 100 + coins * coinValue;
+
+    const parts = [];
+    for (let i = 0; i < bills; i += 1) {
+        parts.push(`  \\draw (${n(i * 0.95)},0.55) rectangle (${n(i * 0.95 + 0.85)},1.05);`);
+        parts.push(`  \\node[font=\\tiny] at (${n(i * 0.95 + 0.42)},0.8) {$\\mathdollar ${billValue}$};`);
+    }
+    for (let i = 0; i < coins; i += 1) {
+        parts.push(`  \\draw (${n(i * 0.6 + 0.28)},0.2) circle (0.24);`);
+        parts.push(`  \\node[font=\\tiny] at (${n(i * 0.6 + 0.28)},0.2) {${coinValue}};`);
+    }
+
+    const tasks = [
+        ['How much money is shown in total?', `$${n(total / 100)}`],
+        ['How much is shown in bills alone?', `$${bills * billValue}`],
+        ['How much is shown in coins alone?', `${coins * coinValue} cents`],
+        ['How many bills are shown?', bills],
+    ];
+    if (grade >= 2) tasks.push(['How many coins are shown?', coins]);
+    if (grade >= 3) tasks.push([`How much more is needed to reach $${Math.ceil(total / 100) + 5}?`, `$${n(Math.ceil(total / 100) + 5 - total / 100)}`]);
+    if (grade >= 3) tasks.push(['Rounded to the nearest dollar, how much is shown?', `$${Math.round(total / 100)}`]);
+    if (grade >= 4) tasks.push(['How much would twice this amount be?', `$${n((total * 2) / 100)}`]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer: `${answer}`, figure: tikz(parts.join('\n')) };
+}
+
+dominoDots.heightMm = 14;
+dominoDots.grades = [1, 4];
+equalGroups.heightMm = 13;
+equalGroups.grades = [1, 5];
+calendarMonth.heightMm = 26;
+calendarMonth.grades = [1, 5];
+moneyPurse.heightMm = 16;
+moneyPurse.grades = [1, 6];
+
+/** An observer sighting a height, for angles of elevation and depression. */
+function elevationScene(ctx) {
+    const angle = randomChoice([20, 25, 30, 35, 40, 45, 50, 55, 60]);
+    const distance = between(8, 60);
+    const height = n(Math.round(distance * Math.tan(rad(angle)) * 100) / 100);
+    const line = n(Math.round((distance / Math.cos(rad(angle))) * 100) / 100);
+
+    const body = '  \\draw (0,0) -- (2.8,0);\n'
+        + '  \\draw (2.8,0) -- (2.8,1.5);\n'
+        + '  \\draw[dashed] (0,0) -- (2.8,1.5);\n'
+        + `  \\draw (0.6,0) arc (0:${n(Math.atan2(1.5, 2.8) * 180 / Math.PI)}:0.6);\n`
+        + `  \\node[font=\\tiny] at (0.95,0.16) {${angle}$^{\\circ}$};\n`
+        + `  \\node[below,font=\\tiny] at (1.4,0) {${distance} m};\n`
+        + '  \\node[right,font=\\tiny] at (2.8,0.75) {$h$};';
+
+    const [question, answer] = randomChoice([
+        [`The angle of elevation to the top is ${angle}° from ${distance} m away. Find the height, to two decimals.`, `${height} m`],
+        [`A tower is ${height} m tall and the observer is ${distance} m away. Find the angle of elevation, to the nearest degree.`, `${angle}°`],
+        [`The angle of elevation is ${angle}° from ${distance} m away. Find the direct line of sight distance, to two decimals.`, `${line} m`],
+        [`Which trigonometric ratio relates the height and the ${distance} m ground distance?`, 'tangent'],
+        [`Looking down from the top instead, what is the angle of depression?`, `${angle}°`],
+        [`If the observer walks closer, does the angle of elevation grow or shrink?`, 'grow'],
+        [`The angle of elevation is ${angle}° and the height is ${height} m. Find the ground distance, to two decimals.`, `${distance} m`],
+    ]);
+
+    return { question, answer: `${answer}`, figure: tikz(body) };
+}
+
+/** A short till receipt, for totals, change and tax. */
+function receiptTotal(ctx) {
+    const grade = gradeOf(ctx);
+    const items = between(2, 3);
+    const prices = Array.from({ length: items }, () => between(1, 9) + randomChoice([0, 0.25, 0.5, 0.75]));
+    const total = n(prices.reduce((sum, price) => sum + price, 0));
+    const paid = Math.ceil(total / 5) * 5;
+
+    const lines = prices.map((price, i) =>
+        `  \\node[font=\\tiny] at (0.35,${n(1.15 - i * 0.28)}) {item ${i + 1}};\n` +
+        `  \\node[font=\\tiny] at (1.5,${n(1.15 - i * 0.28)}) {$\\mathdollar ${price.toFixed(2)}$};`
+    ).join('\n');
+
+    const body = '  \\draw (0,0) rectangle (1.95,1.45);\n' + lines
+        + `\n  \\draw (0.1,${n(1.15 - items * 0.28 + 0.14)}) -- (1.85,${n(1.15 - items * 0.28 + 0.14)});`;
+
+    const tasks = [
+        ['What is the total of this receipt?', `$${total.toFixed(2)}`],
+        ['How many items are on this receipt?', items],
+        ['What is the most expensive item on the receipt?', `$${Math.max(...prices).toFixed(2)}`],
+        ['What is the cheapest item on the receipt?', `$${Math.min(...prices).toFixed(2)}`],
+        [`What is the difference between the dearest and cheapest item?`, `$${n(Math.max(...prices) - Math.min(...prices)).toFixed(2)}`],
+    ];
+    if (grade >= 3) tasks.push([`How much change is left from $${paid}?`, `$${n(paid - total).toFixed(2)}`]);
+    if (grade >= 4) tasks.push(['Rounded to the nearest dollar, what is the total?', `$${Math.round(total)}`]);
+    if (grade >= 5) tasks.push(['What is the mean price of the items, to two decimals?', `$${n(Math.round((total / items) * 100) / 100).toFixed(2)}`]);
+    if (grade >= 6) tasks.push(['What is the total with 13% tax added, to two decimals?', `$${n(Math.round(total * 1.13 * 100) / 100).toFixed(2)}`]);
+    if (grade >= 7) tasks.push(['What is the total after a 20% discount, to two decimals?', `$${n(Math.round(total * 0.8 * 100) / 100).toFixed(2)}`]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer: `${answer}`, figure: tikz(body) };
+}
+
+/** Coins sorted onto a mat, for counting by value. */
+function coinSort(ctx) {
+    const grade = gradeOf(ctx);
+    const nickels = between(1, 4);
+    const dimes = between(1, 4);
+    const quarters = between(1, 3);
+    const total = nickels * 5 + dimes * 10 + quarters * 25;
+
+    const row = (count, label, y) => Array.from({ length: count }, (_, i) =>
+        `  \\draw (${n(i * 0.55 + 0.3)},${y}) circle (0.24);\n` +
+        `  \\node[font=\\tiny] at (${n(i * 0.55 + 0.3)},${y}) {${label}};`
+    ).join('\n');
+
+    const body = `${row(nickels, '5', 1.2)}\n${row(dimes, '10', 0.6)}\n${row(quarters, '25', 0)}`;
+
+    const tasks = [
+        ['How much are the coins worth altogether, in cents?', `${total} cents`],
+        ['How many coins are on the mat?', nickels + dimes + quarters],
+        ['How much are the 25 cent coins worth together?', `${quarters * 25} cents`],
+        ['How much are the 10 cent coins worth together?', `${dimes * 10} cents`],
+        ['Which row is worth the most?', quarters * 25 >= dimes * 10 && quarters * 25 >= nickels * 5 ? 'the 25 cent row' : (dimes * 10 >= nickels * 5 ? 'the 10 cent row' : 'the 5 cent row')],
+        ['How many 5 cent coins are there?', nickels],
+    ];
+    if (grade >= 2) tasks.push(['How much more is needed to make one dollar?', `${Math.max(0, 100 - total)} cents`]);
+    if (grade >= 3) tasks.push(['Write the total in dollars.', `$${n(total / 100).toFixed(2)}`]);
+    if (grade >= 3) tasks.push(['How many 10 cent coins would be worth the same as the 25 cent coins?', n((quarters * 25) / 10)]);
+
+    const [question, answer] = randomChoice(tasks);
+    return { question, answer: `${answer}`, figure: tikz(body) };
+}
+
+elevationScene.heightMm = 20;
+elevationScene.grades = [10, 12];
+receiptTotal.heightMm = 20;
+receiptTotal.grades = [2, 9];
+coinSort.heightMm = 22;
+coinSort.grades = [1, 5];
+
 /**
  * Visual draws by topic id, so grade and topic filtering govern these the way
  * they govern every other question.
@@ -2216,34 +3427,34 @@ budgetPie.grades = [7, 12];
  */
 export const VISUAL_PROBLEMS = {
     // Number
-    'counting-quantity': [tenFrame, numberLine, dotArray],
-    'basic-operations': [dotArray, numberLine, tenFrame],
+    'counting-quantity': [tenFrame, numberLine, dotArray, shapeSort, shapePattern, dominoDots, equalGroups],
+    'basic-operations': [dotArray, numberLine, tenFrame, dominoDots, equalGroups],
     'place-value': [placeValueBlocks, numberLine, hundredGrid],
     'fractions': [fractionBar, fractionCircle],
     'decimals': [hundredGrid, numberLine],
     'percentages': [hundredGrid, fractionBar],
-    'rational-numbers': [numberLine, fractionBar],
+    'rational-numbers': [numberLine, fractionBar, realNumberLine],
     'integers': [numberLine, thermometer],
-    'patterns': [growingPattern, numberLine],
-    'estimation': [numberLine],
+    'patterns': [growingPattern, numberLine, shapePattern],
+    'estimation': [numberLine, realNumberLine],
     'word-problems': [tapeDiagram, areaModel],
     'ratios-proportions': [ratioTape, similarTriangles],
-    'exponents-roots': [squareRootArea],
+    'exponents-roots': [squareRootArea, realNumberLine],
     'order-of-operations': [operationChain],
     'factors-multiples': [factorTree, squareRootArea],
 
     // Measurement
     'length': [ruler],
     'temperature': [thermometer],
-    'time': [clock],
+    'time': [clock, calendarMonth],
     'capacity-volume': [beaker],
     'weight-mass': [balanceScale],
-    'metric-customary': [ruler, beaker],
-    'unit-conversions': [unitLadder],
+    'metric-customary': [ruler, beaker, scaleDrawing],
+    'unit-conversions': [unitLadder, scaleDrawing],
 
     // Geometry
-    '2d-shapes': [rectangleMeasure, compositeShape],
-    '3d-shapes': [solidVolume],
+    '2d-shapes': [rectangleMeasure, compositeShape, shapeOutline, shapeSort],
+    '3d-shapes': [solidVolume, solidOutline],
     'area-perimeter': [rectangleMeasure, compositeShape],
     'volume-surface': [solidVolume],
     'triangles': [rightTriangle, angleMeasure],
@@ -2252,7 +3463,7 @@ export const VISUAL_PROBLEMS = {
     'circles': [circleMeasure],
     'coordinate-geometry': [coordinateGrid, linearGraph],
     'transformations': [transformation],
-    'symmetry': [symmetryShape, transformation],
+    'symmetry': [symmetryShape, transformation, shapeOutline],
     'polygons': [polygonAngles],
     'congruence-similarity': [similarTriangles],
 
@@ -2269,7 +3480,7 @@ export const VISUAL_PROBLEMS = {
     'counting-principles': [treeDiagram],
 
     // Algebra
-    'expressions': [functionMachine],
+    'expressions': [functionMachine, areaModel, balanceScale],
     'linear-equations': [balanceScale, functionMachine],
     'linear-relations': [linearGraph, growingPattern],
     'functions': [linearGraph, functionMachine, parabola, exponentialCurve],
@@ -2280,12 +3491,14 @@ export const VISUAL_PROBLEMS = {
     'rational-expressions': [areaModel],
     'absolute-value': [absoluteValueGraph],
     'factoring': [algebraTiles, areaModel],
-    'coding': [codingFlow],
+    // Coding is the only algebra topic the junior grades have, so it carries
+    // the step-following figures too — without them Grade 4 saw one diagram.
+    'coding': [codingFlow, operationChain, functionMachine, growingPattern],
 
     // Trigonometry
-    'right-triangles': [trigTriangle],
+    'right-triangles': [trigTriangle, bearingDiagram, obliqueTriangle, elevationScene],
     'unit-circle': [unitCircle],
-    'trig-functions': [sineWave, unitCircle, trigTriangle],
+    'trig-functions': [sineWave, unitCircle, trigTriangle, obliqueTriangle],
     'identities': [sineWave],
     'equations': [sineWave],
 
@@ -2295,8 +3508,8 @@ export const VISUAL_PROBLEMS = {
     'exponential-functions': [exponentialCurve],
     'logarithms': [exponentialCurve],
     'rational-functions': [rationalAsymptote],
-    'derivatives': [tangentLine, polynomialCurve],
-    'limits': [tangentLine, rationalAsymptote],
+    'derivatives': [tangentLine, polynomialCurve, slopeSketch],
+    'limits': [tangentLine, rationalAsymptote, slopeSketch],
     'vectors-matrices': [vectorSum],
     'sequences-series': [sequenceDots],
     'conic-sections': [conicShape],
@@ -2305,15 +3518,15 @@ export const VISUAL_PROBLEMS = {
     'integrals': [areaUnderCurve],
     'optimization': [optimizationBox],
     'related-rates': [ladderSlide],
-    'applications': [trigTriangle, tangentLine],
+    'applications': [trigTriangle, tangentLine, bearingDiagram, slopeSketch, elevationScene],
 
     // Financial literacy
-    'coins-and-bills': [coins],
-    'making-change': [coins],
-    'money': [coins],
-    'budgeting': [budgetPie],
-    'unit-price': [priceCompare],
-    'sales-tax-discount': [discountTag],
+    'coins-and-bills': [coins, priceTag, savingsJar, moneyPurse, coinSort],
+    'making-change': [coins, priceTag, savingsJar, moneyPurse, coinSort, receiptTotal],
+    'money': [coins, priceTag, moneyPurse, coinSort],
+    'budgeting': [budgetPie, savingsJar],
+    'unit-price': [priceCompare, receiptTotal],
+    'sales-tax-discount': [discountTag, receiptTotal],
     'simple-interest': [interestBars],
     'compound-interest': [interestBars],
     'currency-exchange': [currencyBars],

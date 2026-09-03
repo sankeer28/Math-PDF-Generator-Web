@@ -10,6 +10,8 @@ import { WORD_PROBLEM_TEMPLATES } from '../curriculum/templates/wordProblems.js'
 import { GRADE_EQUATIONS, GRADE_WORD_PROBLEMS } from '../curriculum/templates/gradeProblems.js';
 import { FINANCIAL_PROBLEMS } from '../curriculum/templates/financialProblems.js';
 import { VISUAL_PROBLEMS } from '../curriculum/templates/visualProblems.js';
+import { drawEarlyProblem } from '../curriculum/templates/earlyGrades.js';
+import { drawExtraProblem } from '../curriculum/templates/extraProblems.js';
 import { SUBJECT_TOPICS, defaultParameterValues, parametersForTopic, coerceParameter } from '../curriculum/index.js';
 
 /**
@@ -27,6 +29,14 @@ function fingerprint(problem) {
 function findTopic(topicId) {
     for (const subject of Object.values(SUBJECT_TOPICS)) {
         if (subject.topics[topicId]) return subject.topics[topicId];
+    }
+    return null;
+}
+
+/** The subject a topic belongs to, or null when the topic is unknown. */
+function subjectOfTopic(topicId) {
+    for (const [subjectId, subject] of Object.entries(SUBJECT_TOPICS)) {
+        if (subject.topics[topicId]) return subjectId;
     }
     return null;
 }
@@ -192,6 +202,37 @@ export class ProblemGenerator {
         return draw();
     }
 
+    /** The worksheet's grade as a number, 6 when it cannot be read. */
+    gradeNumber() {
+        return Number(String(this.config?.grade?.id || '').replace('grade', '')) || 6;
+    }
+
+    /**
+     * Keeps only the topics the worksheet's grade has actually met.
+     *
+     * The fallback pools used to list every topic a subject owns, so a Grade 2
+     * sheet could be asked for a hypotenuse or a standard deviation. Falls back
+     * to the full list when nothing suits, so a subject always returns work.
+     *
+     * @param {string} subject
+     * @param {string[]} topicIds
+     * @returns {string[]}
+     */
+    topicsAtGrade(subject, topicIds) {
+        const gradeId = this.config?.grade?.id;
+        if (!gradeId) return topicIds;
+
+        const topics = SUBJECT_TOPICS[subject]?.topics || {};
+        const suited = topicIds.filter((id) => !topics[id] || topics[id].grades.includes(gradeId));
+        return suited.length > 0 ? suited : topicIds;
+    }
+
+    /** True for the grades whose content the subject generators overshoot. */
+    isEarlyGrade() {
+        const grade = this.gradeNumber();
+        return grade >= 1 && grade <= 3;
+    }
+
     validateOperationForSubject(operation, subject) {
         switch (subject) {
             case 'algebra':
@@ -223,6 +264,23 @@ export class ProblemGenerator {
         // Use provided subject or get random one
         if (!subject) {
             subject = this.getRandomSubject();
+        }
+
+        // The subject generators were written for the middle grades and reach
+        // for ideas Grades 1-3 have not met. Those grades get their own work
+        // first, roughly half the time, so the usual generators still show
+        // through where they are appropriate.
+        if (this.isEarlyGrade() && Math.random() < 0.55) {
+            const early = drawEarlyProblem(subject, this.config.grade.id);
+            if (early) return early;
+        }
+
+        // The supplementary banks widen every grade. They are consulted often
+        // enough to show through on a page but not so often that they crowd
+        // out the subject generators, which still carry the core work.
+        if (Math.random() < 0.45) {
+            const extra = drawExtraProblem(subject, this.gradeNumber());
+            if (extra) return extra;
         }
 
         if (subject === 'algebra') {
@@ -1133,7 +1191,7 @@ export class ProblemGenerator {
     generateMeasurementProblem(selectedTopics = 'all') {
         const topics = selectedTopics !== 'all' && selectedTopics.length > 0
             ? selectedTopics
-            : ['length', 'weight-mass', 'capacity-volume', 'time', 'money', 'temperature', 'unit-conversions'];
+            : this.topicsAtGrade('measurement', ['length', 'weight-mass', 'capacity-volume', 'time', 'money', 'temperature', 'unit-conversions']);
 
         const topic = Array.isArray(topics) ? topics[Math.floor(Math.random() * topics.length)] : topics;
 
@@ -1873,12 +1931,22 @@ export class ProblemGenerator {
             }
         }
 
-        const problems = [
-            () => this.generateAreaProblem(),
-            () => this.generatePerimeterProblem(),
-            () => this.generatePythagoreanProblem()
+        // The fallback pool has to respect the grade too. Left unfiltered it
+        // offered the Pythagorean theorem — a Grade 8 idea — to every grade,
+        // so a Grade 2 sheet could ask for a hypotenuse.
+        const fallbacks = [
+            ['2d-shapes', () => this.generate2DShapesProblem()],
+            ['3d-shapes', () => this.generate3DShapesProblem()],
+            ['symmetry', () => this.generateSymmetryProblem()],
+            ['area-perimeter', () => (Math.random() < 0.5 ? this.generateAreaProblem() : this.generatePerimeterProblem())],
+            ['transformations', () => this.generateTransformationProblem()],
+            ['congruence-similarity', () => this.generateCongruenceSimilarityProblem()],
+            ['pythagorean-theorem', () => this.generatePythagoreanProblem()],
         ];
-        return problems[Math.floor(Math.random() * problems.length)]();
+
+        const suited = this.topicsAtGrade('geometry', fallbacks.map(([topicId]) => topicId));
+        const pool = fallbacks.filter(([topicId]) => suited.includes(topicId));
+        return randomChoice(pool.length ? pool : fallbacks)[1]();
     }
 
     generate2DShapesProblem() {
@@ -2678,11 +2746,19 @@ export class ProblemGenerator {
             }
         }
 
-        const problems = [
-            () => this.generateMeanProblem(),
-            () => this.generateProbabilityProblem()
+        // Mean and probability are Grade 4 ideas. Offered as the only fallback
+        // they reached Grade 1, which reads graphs and tallies instead.
+        const fallbacks = [
+            ['picture-graphs', () => this.generatePictureGraphProblem()],
+            ['bar-graphs', () => this.generateBarGraphProblem()],
+            ['line-plots', () => this.generateLinePlotProblem()],
+            ['mean-median-mode', () => this.generateMeanProblem()],
+            ['probability', () => this.generateProbabilityProblem()],
         ];
-        return problems[Math.floor(Math.random() * problems.length)]();
+
+        const suited = this.topicsAtGrade('statistics', fallbacks.map(([topicId]) => topicId));
+        const pool = fallbacks.filter(([topicId]) => suited.includes(topicId));
+        return randomChoice(pool.length ? pool : fallbacks)[1]();
     }
 
     generatePictureGraphProblem() {
@@ -2846,7 +2922,22 @@ export class ProblemGenerator {
                 };
             }
         ];
-        return problemTypes[Math.floor(Math.random() * problemTypes.length)]();
+
+        // The pool mixes junior and senior work. Standard deviation is a Grade
+        // 9 idea and quartiles a Grade 7 one, but the whole pool was offered
+        // from Grade 4, where the strand is still averages and range. Filtering
+        // on the question rather than on a position in the list keeps this
+        // correct if the pool is ever reordered.
+        const grade = this.gradeNumber();
+        const tooSenior = (question) => (grade < 9 && /standard deviation|variance/i.test(question))
+            || (grade < 7 && /quartile/i.test(question));
+
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+            const problem = problemTypes[Math.floor(Math.random() * problemTypes.length)]();
+            if (!tooSenior(problem.question)) return problem;
+        }
+
+        return problemTypes[0]();
     }
 
     generateProbabilityProblem() {
@@ -3061,7 +3152,18 @@ export class ProblemGenerator {
     generateVisualProblem(selectedTopics = 'all') {
         const gradeId = this.config?.grade?.id;
 
+        // Only the subjects the user asked for. Without this a sheet set to
+        // Geometry alone still drew thermometers and function machines, since
+        // the figure pool spans every subject.
+        const subjects = this.config?.subjects;
+        const inChosenSubject = (topicId) => {
+            if (!subjects?.length) return true;
+            const subjectId = subjectOfTopic(topicId);
+            return !subjectId || subjects.includes(subjectId);
+        };
+
         const forGrade = Object.keys(VISUAL_PROBLEMS).filter((topicId) => {
+            if (!inChosenSubject(topicId)) return false;
             const topic = findTopic(topicId);
             return !topic || !gradeId || topic.grades.includes(gradeId);
         });
@@ -3070,7 +3172,7 @@ export class ProblemGenerator {
             ? forGrade
             : forGrade.filter((topicId) => selectedTopics.includes(topicId));
 
-        const pool = chosen.length ? chosen : (forGrade.length ? forGrade : Object.keys(VISUAL_PROBLEMS));
+        const pool = chosen.length ? chosen : forGrade;
 
         // Balance by figure kind, not by topic: four data topics all draw a bar
         // graph, so picking a topic first would fill a page with bar graphs.
@@ -3090,16 +3192,14 @@ export class ProblemGenerator {
             }
         }
 
-        // Nothing this grade can draw from the chosen topics: widen to any
-        // figure the grade can take rather than draw something inappropriate.
+        // Nothing this grade can draw from the chosen subjects — Grade 1
+        // geometry has no figures, for one. Widening to every subject was what
+        // put thermometers on a geometry-only sheet, so answer with ordinary
+        // work from a subject the user actually chose instead.
         if (byDraw.size === 0) {
-            for (const [topicId, draws] of Object.entries(VISUAL_PROBLEMS)) {
-                for (const draw of draws) {
-                    if (suitsGrade(draw) && !byDraw.has(draw)) byDraw.set(draw, topicId);
-                }
-            }
+            const subject = subjects?.length ? randomChoice(subjects) : 'arithmetic';
+            return this.generateEquation('mixed', selectedTopics, subject);
         }
-        if (byDraw.size === 0) return this.generateEquation('mixed', selectedTopics, 'arithmetic');
 
         // Work through the available figure kinds before repeating any. Drawing
         // at random put two "growth or decay?" exponentials side by side; the

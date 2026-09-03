@@ -158,14 +158,18 @@ test('a grade is never offered a figure from outside its band', async () => {
     const { ProblemGenerator } = await import('../../js/modules/problemGenerator.js');
     const { VISUAL_PROBLEMS } = await import('../../js/curriculum/templates/visualProblems.js');
 
-    // Which question wordings each figure can produce, so a drawn problem can be
-    // traced back to the figure that made it.
-    const owner = new Map();
+    // Which figures can produce each question wording. A wording can belong to
+    // more than one figure — "How many figures are shown?" fits both a growing
+    // pattern and a sequence of dots — so a question is only evidence of a
+    // band violation when *every* figure that could have written it is out of
+    // band for the grade.
+    const owners = new Map();
     for (const draw of new Set(Object.values(VISUAL_PROBLEMS).flat())) {
         for (let i = 0; i < 40; i += 1) {
             for (const grade of [2, 6, 11]) {
                 const problem = draw({ grade, difficulty: 'medium', maxNumber: 20, maxDenominator: 12 });
-                if (!owner.has(problem.question)) owner.set(problem.question, draw);
+                if (!owners.has(problem.question)) owners.set(problem.question, new Set());
+                owners.get(problem.question).add(draw);
             }
         }
     }
@@ -177,12 +181,19 @@ test('a grade is never offered a figure from outside its band', async () => {
 
         for (let i = 0; i < 150; i += 1) {
             const problem = generator.generateVisualProblem();
-            const draw = owner.get(problem.question);
-            if (!draw) continue;
-            const [first, last] = draw.grades;
+            const candidates = owners.get(problem.question);
+            if (!candidates) continue;
+
+            const anyInBand = [...candidates].some((draw) => {
+                const [first, last] = draw.grades;
+                return grade >= first && grade <= last;
+            });
+
             assert.ok(
-                grade >= first && grade <= last,
-                `${gradeId} was offered ${draw.name}, which is for grades ${first}-${last}`
+                anyInBand,
+                `${gradeId} was offered "${problem.question}", which only ${[...candidates]
+                    .map((draw) => `${draw.name} (grades ${draw.grades.join('-')})`)
+                    .join(', ')} can produce`
             );
         }
     }
@@ -202,4 +213,207 @@ test('every figure declared in the module is reachable from some topic', async (
     const wired = new Set(Object.values(module.VISUAL_PROBLEMS).flat().map((draw) => draw.name));
     const orphans = declared.filter((name) => !wired.has(name));
     assert.deepEqual(orphans, [], `figures declared but never offered: ${orphans.join(', ')}`);
+});
+
+test('every early-grade problem states a real question and a real answer', async () => {
+    // These templates are written by hand and are easy to get wrong in a way
+    // nothing else catches: an answer that is a hint ("add the two ends") or an
+    // undefined slipping into a template string still renders a worksheet, and
+    // the mistake surfaces only on the answer key a teacher hands out.
+    const { EARLY_PROBLEMS, drawEarlyProblem } = await import('../../js/curriculum/templates/earlyGrades.js');
+
+    for (const [subject, byGrade] of Object.entries(EARLY_PROBLEMS)) {
+        for (const gradeId of Object.keys(byGrade)) {
+            for (let i = 0; i < 400; i += 1) {
+                const problem = drawEarlyProblem(subject, gradeId);
+                assert.ok(problem, `${subject}/${gradeId} produced nothing`);
+
+                const where = `${subject}/${gradeId}: ${problem.question}`;
+                assert.ok(problem.question?.trim().length > 0, `${where} has no question`);
+
+                const answer = String(problem.answer ?? '');
+                assert.ok(answer.trim().length > 0, `${where} has no answer`);
+                assert.ok(!/undefined|NaN|\[object/.test(answer), `${where} answered with "${answer}"`);
+                assert.ok(!/undefined|NaN|\[object/.test(problem.question), `${where} has a broken question`);
+            }
+        }
+    }
+});
+
+test('early-grade problems only cover grades 1 to 3', async () => {
+    const { EARLY_PROBLEMS, drawEarlyProblem } = await import('../../js/curriculum/templates/earlyGrades.js');
+
+    for (const byGrade of Object.values(EARLY_PROBLEMS)) {
+        for (const gradeId of Object.keys(byGrade)) {
+            assert.ok(['grade1', 'grade2', 'grade3'].includes(gradeId), `${gradeId} is not an early grade`);
+        }
+    }
+
+    assert.equal(drawEarlyProblem('arithmetic', 'grade7'), null);
+    assert.equal(drawEarlyProblem('calculus', 'grade1'), null);
+});
+
+test('every supplementary problem states a real question and a real answer', async () => {
+    const { EXTRA_PROBLEMS, drawExtraProblem } = await import('../../js/curriculum/templates/extraProblems.js');
+
+    for (const subject of Object.keys(EXTRA_PROBLEMS)) {
+        for (let grade = 1; grade <= 12; grade += 1) {
+            for (let i = 0; i < 300; i += 1) {
+                const problem = drawExtraProblem(subject, grade);
+                if (!problem) continue;
+
+                const where = `${subject} grade ${grade}: ${problem.question}`;
+                const answer = String(problem.answer ?? '');
+                assert.ok(problem.question?.trim().length > 0, `${where} has no question`);
+                assert.ok(answer.trim().length > 0, `${where} has no answer`);
+                assert.ok(!/undefined|NaN|Infinity|\[object/.test(answer), `${where} answered with "${answer}"`);
+                assert.ok(!/undefined|NaN|Infinity|\[object/.test(problem.question), `${where} has a broken question`);
+            }
+        }
+    }
+});
+
+test('supplementary draws declare a sane grade band', async () => {
+    const { EXTRA_PROBLEMS } = await import('../../js/curriculum/templates/extraProblems.js');
+
+    for (const [subject, bank] of Object.entries(EXTRA_PROBLEMS)) {
+        assert.ok(bank.length > 0, `${subject} has no draws`);
+        for (const draw of bank) {
+            const [low, high] = draw.grades ?? [];
+            assert.ok(Number.isInteger(low) && Number.isInteger(high), `${subject} has a draw with no grade band`);
+            assert.ok(low >= 1 && high <= 12 && low <= high, `${subject} has band ${low}-${high}`);
+        }
+    }
+});
+
+test('supplementary symbols are all ones the LaTeX escaper knows', async () => {
+    // The banks write plain Unicode (×, √, ², π). Anything the escaper has no
+    // mapping for reaches pdfTeX as a byte it cannot set, and the worksheet
+    // fails to typeset rather than rendering wrongly — so catch it here.
+    const { readFileSync } = await import('node:fs');
+    const { EXTRA_PROBLEMS, drawExtraProblem } = await import('../../js/curriculum/templates/extraProblems.js');
+
+    const escaper = readFileSync(new URL('../../js/latex/escape.js', import.meta.url), 'utf8');
+    const used = new Set();
+    for (const subject of Object.keys(EXTRA_PROBLEMS)) {
+        for (let grade = 1; grade <= 12; grade += 1) {
+            for (let i = 0; i < 200; i += 1) {
+                const problem = drawExtraProblem(subject, grade);
+                if (!problem) continue;
+                for (const character of `${problem.question}${problem.answer}`) {
+                    if (character.charCodeAt(0) > 126) used.add(character);
+                }
+            }
+        }
+    }
+
+    const unmapped = [...used].filter((character) => !escaper.includes(character));
+    assert.deepEqual(unmapped, [], `symbols the escaper does not map: ${unmapped.join(' ')}`);
+});
+
+test('no grade is asked for an idea it has not met', async () => {
+    // Every subject has a fallback pool for when no topic is chosen. Those
+    // pools listed whatever the subject could generate, so a Grade 2 sheet
+    // could ask for a hypotenuse and a Grade 4 sheet for a standard deviation.
+    // The grade each idea belongs to is the Ontario curriculum's.
+    const { ProblemGenerator } = await import('../../js/modules/problemGenerator.js');
+
+    const notBefore = [
+        [/hypotenuse|pythagor/i, 8],
+        [/standard deviation|variance/i, 9],
+        [/quartile/i, 7],
+        [/integral|derivative/i, 12],
+        [/logarithm/i, 11],
+        [/scientific notation/i, 7],
+        [/sine|cosine|tangent/i, 10],
+        [/quadratic/i, 9],
+    ];
+
+    for (const gradeConfig of Object.values(GRADE_CONFIGS)) {
+        const grade = Number(gradeConfig.id.replace('grade', ''));
+
+        for (const subject of gradeConfig.subjects) {
+            const generator = new ProblemGenerator();
+            generator.setConfig(gradeConfig.id, 'medium', [subject]);
+
+            for (let i = 0; i < 250; i += 1) {
+                const { question } = generator.generateProblem('mixed', 'equations', 'all');
+                for (const [pattern, earliest] of notBefore) {
+                    assert.ok(
+                        grade >= earliest || !pattern.test(question),
+                        `${gradeConfig.id}/${subject} was asked (a grade ${earliest} idea): ${question}`
+                    );
+                }
+            }
+        }
+    }
+});
+
+test('choosing one subject never draws a topic from another', async () => {
+    // The figure pool spans every subject, and it was filtered only by grade
+    // and topic. A sheet set to Geometry alone still drew thermometers,
+    // function machines and money, because nothing checked the subject.
+    const { ProblemGenerator } = await import('../../js/modules/problemGenerator.js');
+
+    const subjectOfTopic = (topicId) =>
+        Object.entries(SUBJECT_TOPICS).find(([, subject]) => subject.topics[topicId])?.[0] ?? null;
+
+    for (const gradeConfig of Object.values(GRADE_CONFIGS)) {
+        for (const subject of gradeConfig.subjects) {
+            const generator = new ProblemGenerator();
+            generator.setConfig(gradeConfig.id, 'medium', [subject]);
+
+            // The topic a problem is built from is the honest signal; question
+            // wording is shared between figures and cannot identify a subject.
+            const drawn = [];
+            const paramsFor = generator.paramsFor.bind(generator);
+            generator.paramsFor = (topicId) => {
+                drawn.push(topicId);
+                return paramsFor(topicId);
+            };
+
+            for (const kind of ['visual', 'mixed', 'equations', 'word']) {
+                for (let i = 0; i < 120; i += 1) generator.generateProblem('mixed', kind, 'all');
+            }
+
+            for (const topicId of drawn) {
+                const owner = subjectOfTopic(topicId);
+                assert.ok(
+                    owner === null || owner === subject,
+                    `${gradeConfig.id} set to ${subject} drew ${topicId}, which belongs to ${owner}`
+                );
+            }
+        }
+    }
+});
+
+test('no figure writes a character the LaTeX escaper cannot map', async () => {
+    // A "half" sign in a trig question pulled in the TS1 text companion fonts,
+    // which this TeX build does not ship, and the whole worksheet failed to
+    // typeset. Any unmapped non-ASCII character is the same fault waiting.
+    const { readFileSync } = await import('node:fs');
+    const { VISUAL_PROBLEMS } = await import('../../js/curriculum/templates/visualProblems.js');
+
+    const escaper = readFileSync(new URL('../../js/latex/escape.js', import.meta.url), 'utf8');
+    const used = new Map();
+
+    for (const draw of new Set(Object.values(VISUAL_PROBLEMS).flat())) {
+        const [first, last] = draw.grades;
+        for (let grade = first; grade <= last; grade += 1) {
+            for (const difficulty of ['easy', 'medium', 'hard']) {
+                for (let i = 0; i < 40; i += 1) {
+                    const problem = draw({ grade, difficulty, maxNumber: 20, maxDenominator: 12, terms: 3 });
+                    for (const character of `${problem.question}${problem.answer}`) {
+                        if (character.charCodeAt(0) > 126 && !used.has(character)) used.set(character, draw.name);
+                    }
+                }
+            }
+        }
+    }
+
+    const unmapped = [...used].filter(([character]) => !escaper.includes(character));
+    assert.deepEqual(
+        unmapped, [],
+        `unmapped characters: ${unmapped.map(([c, name]) => `"${c}" from ${name}`).join(', ')}`
+    );
 });

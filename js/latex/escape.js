@@ -52,6 +52,7 @@ const MATH_REPLACEMENTS = new Map([
     ['∞', '\\infty '],
     ['→', '\\to '],
     ['°', '^{\\circ}'],
+    ['⁻', '^{-}'],
     ['⁰', '^{0}'],
     ['¹', '^{1}'],
     ['²', '^{2}'],
@@ -83,7 +84,7 @@ const OPERATOR_NAMES = new Set([
     'log', 'ln', 'exp', 'lim', 'max', 'min', 'gcd', 'det', 'mod',
 ]);
 
-const MATH_SIGNALS = /[0-9+\-*/^()=<>|.,%×÷·−√π°θ∞≈≤≥≠±⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ₀₁₂₃₄₅₆₇₈₉ₙ]/;
+const MATH_SIGNALS = /[0-9+\-*/^()=<>|.,%×÷·−√π°θ∞≈≤≥≠±⁻⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ₀₁₂₃₄₅₆₇₈₉ₙ]/;
 const WORD_LIKE = /[A-Za-z]{3,}/;
 const BLANK = /_{2,}/g;
 
@@ -240,6 +241,9 @@ function formatMathToken(token) {
 
     out = out.replace(/\*/g, '\\times ');
     out = out.replace(/%/g, '\\%');
+    // TeX reads a single token after ^ or _, so a macro there needs bracing:
+    // "3^__" escapes to "3^\\wsblank{}", which fails with "Missing { inserted".
+    out = out.replace(/([\^_])(\\[A-Za-z@]+(?:\{\})?)/g, '$1{$2}');
     out = out.replace(/\$/g, '\\wsdollar ');
     // Multi-letter names are units or labels, not a product of variables.
     out = out.replace(/[A-Za-z]{2,}/g, (word, offset, whole) => {
