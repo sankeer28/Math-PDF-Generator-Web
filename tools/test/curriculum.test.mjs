@@ -187,3 +187,19 @@ test('a grade is never offered a figure from outside its band', async () => {
         }
     }
 });
+
+test('every figure declared in the module is reachable from some topic', async () => {
+    // A figure is anything given a height and a grade band. One that no topic
+    // lists is dead code: it compiles, it passes its own checks, and it never
+    // once appears on a worksheet.
+    const { readFileSync } = await import('node:fs');
+    const module = await import('../../js/curriculum/templates/visualProblems.js');
+
+    const source = readFileSync(new URL('../../js/curriculum/templates/visualProblems.js', import.meta.url), 'utf8');
+    const declared = [...source.matchAll(/^(\w+)\.heightMm = /gm)].map((match) => match[1]);
+    assert.ok(declared.length > 40, 'expected the figure catalogue to be found');
+
+    const wired = new Set(Object.values(module.VISUAL_PROBLEMS).flat().map((draw) => draw.name));
+    const orphans = declared.filter((name) => !wired.has(name));
+    assert.deepEqual(orphans, [], `figures declared but never offered: ${orphans.join(', ')}`);
+});

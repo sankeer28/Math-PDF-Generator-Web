@@ -1349,6 +1349,717 @@ function boxPlot(ctx) {
     };
 }
 
+/* ================================================== NUMBER, PART TWO */
+
+/** A tape diagram: two quantities in a ratio. */
+function ratioTape(ctx) {
+    const grade = gradeOf(ctx);
+    // At least two boxes a side, or the bars read as two empty squares.
+    const a = between(2, 5);
+    const b = between(2, 5);
+    const unit = between(2, 9);
+    const cell = n(Math.min(0.45, 4.4 / (a + b)));
+
+    const boxes = (count, y) => Array.from({ length: count }, (_, i) =>
+        `  \\draw (${n(i * cell)},${y}) rectangle (${n((i + 1) * cell)},${n(y + 0.42)});`
+    ).join('\n');
+
+    const tasks = [
+        ['What is the ratio of the top bar to the bottom bar?', simplify(a, b)],
+        [`Each box is worth ${unit}. What is the total value of both bars?`, `${(a + b) * unit}`],
+    ];
+    if (grade >= 7) tasks.push([`The top bar is worth ${a * unit}. What is one box worth?`, `${unit}`]);
+
+    const [question, answer] = randomChoice(tasks);
+    const labelX = n(Math.max(a, b) * cell + 0.12);
+    return {
+        question,
+        answer,
+        figure: tikz(
+            `${boxes(a, 0.5)}\n${boxes(b, 0)}\n` +
+            `  \\node[right,font=\\tiny] at (${labelX},0.71) {A};\n` +
+            `  \\node[right,font=\\tiny] at (${labelX},0.21) {B};`
+        ),
+    };
+}
+
+/** A prime factor tree with one branch left blank. */
+function factorTree(ctx) {
+    const primes = [2, 3, 5, 7];
+    const p1 = randomChoice(primes);
+    const p2 = randomChoice(primes);
+    const p3 = randomChoice(primes);
+    const composite = p1 * p2;
+    const total = composite * p3;
+
+    return {
+        question: 'Complete the factor tree: what is the missing value?',
+        answer: `${composite}`,
+        figure: tikz(
+            `  \\node[font=\\scriptsize] (a) at (1.4,1.7) {$${total}$};\n` +
+            `  \\node[font=\\scriptsize] (b) at (0.5,0.9) {$${p3}$};\n` +
+            `  \\node[font=\\scriptsize,draw] (c) at (2.3,0.9) {$?$};\n` +
+            `  \\node[font=\\scriptsize] (d) at (1.7,0.1) {$${p1}$};\n` +
+            `  \\node[font=\\scriptsize] (e) at (2.9,0.1) {$${p2}$};\n` +
+            `  \\draw (a) -- (b); \\draw (a) -- (c); \\draw (c) -- (d); \\draw (c) -- (e);`
+        ),
+    };
+}
+
+/** A square of unit tiles: perfect squares and square roots. */
+function squareRootArea(ctx) {
+    const side = between(2, 9);
+    const cell = n(Math.min(0.24, 2.3 / side));
+    const askRoot = Math.random() < 0.5;
+
+    return {
+        question: askRoot
+            ? 'The square is made of unit tiles. What is the length of one side?'
+            : 'The square is made of unit tiles. How many tiles are there in total?',
+        answer: askRoot ? `${side}` : `${side * side}`,
+        figure: tikz(
+            `  \\draw[step=${cell},black!45,line width=0.25pt] (0,0) grid (${n(side * cell)},${n(side * cell)});\n` +
+            `  \\draw (0,0) rectangle (${n(side * cell)},${n(side * cell)});`
+        ),
+    };
+}
+
+/** A chain of operation boxes, evaluated in order. */
+function operationChain(ctx) {
+    const start = between(2, 12);
+    const steps = [
+        ['+', between(2, 9)],
+        ['\\times', between(2, 5)],
+        ['-', between(1, 9)],
+    ].slice(0, gradeOf(ctx) <= 5 ? 2 : 3);
+
+    let value = start;
+    for (const [op, amount] of steps) value = op === '+' ? value + amount : op === '-' ? value - amount : value * amount;
+
+    let x = 0;
+    const boxes = steps.map(([op, amount]) => {
+        const block =
+            `  \\draw (${n(x)},0) rectangle (${n(x + 0.95)},0.6);\n` +
+            `  \\node[font=\\scriptsize] at (${n(x + 0.475)},0.3) {$${op} ${amount}$};\n` +
+            `  \\draw[->] (${n(x - 0.35)},0.3) -- (${n(x)},0.3);`;
+        x += 1.3;
+        return block;
+    }).join('\n');
+
+    return {
+        question: 'Follow the boxes from left to right. What is the result?',
+        answer: `${value}`,
+        figure: tikz(
+            `  \\node[font=\\scriptsize] at (-0.62,0.3) {$${start}$};\n${boxes}\n` +
+            `  \\draw[->] (${n(x - 0.35)},0.3) -- (${n(x)},0.3);\n` +
+            `  \\node[font=\\scriptsize] at (${n(x + 0.25)},0.3) {$?$};`
+        ),
+    };
+}
+
+/** A bar model for a word problem: part, part, whole. */
+function tapeDiagram(ctx) {
+    const part = between(4, 30);
+    const other = between(4, 30);
+    const whole = part + other;
+    const width = 4.4;
+    const split = n((part / whole) * width);
+
+    const hideWhole = Math.random() < 0.5;
+    return {
+        question: hideWhole
+            ? 'The bar model shows two parts. What is the whole?'
+            : 'The bar model shows the whole and one part. What is the other part?',
+        answer: hideWhole ? `${whole}` : `${other}`,
+        figure: tikz(
+            `  \\draw (0,0.55) rectangle (${width},1.05);\n` +
+            `  \\node[font=\\scriptsize] at (${n(width / 2)},0.8) {${hideWhole ? '?' : `$${whole}$`}};\n` +
+            `  \\draw (0,0) rectangle (${split},0.5);\n` +
+            `  \\node[font=\\scriptsize] at (${n(split / 2)},0.25) {$${part}$};\n` +
+            `  \\draw (${split},0) rectangle (${width},0.5);\n` +
+            `  \\node[font=\\scriptsize] at (${n((split + width) / 2)},0.25) {${hideWhole ? `$${other}$` : '?'}};`
+        ),
+    };
+}
+
+/** A conversion ladder between metric units. */
+function unitLadder(ctx) {
+    const rungs = ['km', 'm', 'cm', 'mm'];
+    const from = between(0, 2);
+    const to = from + between(1, Math.min(2, rungs.length - 1 - from));
+    const factor = 10 ** [3, 2, 1][from] ** 1;
+    const steps = to - from;
+    const multiplier = from === 0 && to === 1 ? 1000 : 10 ** (steps === 1 ? (from === 1 ? 2 : 1) : 3);
+    const value = between(2, 9);
+
+    const ladder = rungs.map((label, i) =>
+        `  \\node[font=\\scriptsize] at (0,${n(-i * 0.5)}) {${label}};` +
+        (i < rungs.length - 1 ? `\n  \\draw[->] (0.28,${n(-i * 0.5 - 0.08)}) -- (0.28,${n(-i * 0.5 - 0.42)});` : '')
+    ).join('\n');
+
+    return {
+        question: `Use the ladder: convert ${value} ${rungs[from]} to ${rungs[to]}.`,
+        answer: `${value * multiplier} ${rungs[to]}`,
+        figure: tikz(ladder),
+    };
+}
+
+/* ================================================== ALGEBRA, PART TWO */
+
+/** Two lines crossing: the solution of a system. */
+function systemsGraph(ctx) {
+    const x = between(-3, 3);
+    const y = between(-3, 3);
+    const m1 = randomChoice([-2, -1, 1, 2]);
+    let m2 = randomChoice([-2, -1, 1, 2, 3]);
+    if (m2 === m1) m2 = m1 + 1;
+
+    const cell = 0.3;
+    const max = 5;
+    const g = (v) => n((v + max) * cell);
+    const segment = (m) => {
+        const b = y - m * x;
+        const points = [];
+        for (let px = -max; px <= max; px += 1) {
+            const py = m * px + b;
+            if (py >= -max && py <= max) points.push([px, py]);
+        }
+        return points.length >= 2
+            ? `  \\draw[line width=0.8pt] (${g(points[0][0])},${g(points[0][1])}) -- (${g(points[points.length - 1][0])},${g(points[points.length - 1][1])});`
+            : '';
+    };
+
+    return {
+        question: 'The two lines are a system of equations. What is the solution?',
+        answer: `(${x}, ${y})`,
+        figure: tikz(
+            `  \\draw[step=${cell},black!18,line width=0.25pt] (0,0) grid (${n(2 * max * cell)},${n(2 * max * cell)});\n` +
+            `  \\draw[->] (0,${g(0)}) -- (${n(2 * max * cell + 0.2)},${g(0)}) node[right,font=\\tiny] {$x$};\n` +
+            `  \\draw[->] (${g(0)},0) -- (${g(0)},${n(2 * max * cell + 0.2)}) node[above,font=\\tiny] {$y$};\n` +
+            `${segment(m1)}\n${segment(m2)}\n  \\filldraw (${g(x)},${g(y)}) circle (1.8pt);`
+        ),
+    };
+}
+
+/** Algebra tiles: an area model of a quadratic. */
+function algebraTiles(ctx) {
+    const a = between(1, 3);
+    const b = between(1, 4);
+    const big = 0.62;
+    const small = 0.24;
+
+    const squares = Array.from({ length: a }, (_, i) =>
+        `  \\draw[fill=black!18] (${n(i * (big + 0.08))},0) rectangle (${n(i * (big + 0.08) + big)},${big});\n` +
+        `  \\node[font=\\tiny] at (${n(i * (big + 0.08) + big / 2)},${n(big / 2)}) {$x^2$};`
+    ).join('\n');
+
+    const startX = a * (big + 0.08) + 0.15;
+    const bars = Array.from({ length: b }, (_, i) =>
+        `  \\draw[fill=black!8] (${n(startX + i * (small + 0.06))},0) rectangle (${n(startX + i * (small + 0.06) + small)},${big});\n` +
+        `  \\node[font=\\tiny] at (${n(startX + i * (small + 0.06) + small / 2)},${n(big / 2)}) {$x$};`
+    ).join('\n');
+
+    return {
+        question: 'Write the expression these algebra tiles represent.',
+        answer: `${a === 1 ? '' : a}x² + ${b === 1 ? '' : b}x`,
+        figure: tikz(`${squares}\n${bars}`),
+    };
+}
+
+/** An area model showing a product split into partial products. */
+function areaModel(ctx) {
+    const grade = gradeOf(ctx);
+    const tens = between(1, 4) * 10;
+    const ones = between(1, 9);
+    const multiplier = between(2, 9);
+
+    return {
+        question: grade >= 9
+            ? 'Write the product this area model represents, expanded.'
+            : 'Use the area model to find the product.',
+        answer: grade >= 9
+            ? `${multiplier * tens} + ${multiplier * ones} = ${multiplier * (tens + ones)}`
+            : `${multiplier * (tens + ones)}`,
+        figure: tikz(
+            `  \\draw (0,0) rectangle (2.1,0.9);\n  \\draw (1.5,0) -- (1.5,0.9);\n` +
+            `  \\node[font=\\tiny] at (0.75,0.45) {$${multiplier} \\times ${tens}$};\n` +
+            `  \\node[font=\\tiny] at (1.8,0.45) {$${multiplier} \\times ${ones}$};\n` +
+            `  \\node[above,font=\\tiny] at (0.75,0.9) {$${tens}$};\n` +
+            `  \\node[above,font=\\tiny] at (1.8,0.9) {$${ones}$};\n` +
+            `  \\node[left,font=\\tiny] at (0,0.45) {$${multiplier}$};`
+        ),
+    };
+}
+
+/** A V-shaped absolute value graph. */
+function absoluteValueGraph(ctx) {
+    const h = between(-2, 2);
+    const k = between(-3, 2);
+    const cell = 0.3;
+    const max = 5;
+    const g = (v) => n((v + max) * cell);
+
+    const arm = (direction) => {
+        const points = [];
+        for (let x = h; direction > 0 ? x <= max : x >= -max; x += direction) {
+            const y = Math.abs(x - h) + k;
+            if (y >= -max && y <= max) points.push(`(${g(x)},${g(y)})`);
+        }
+        return points;
+    };
+    const left = arm(-1);
+    const right = arm(1);
+
+    const tasks = [
+        ['What are the coordinates of the vertex?', `(${h}, ${k})`],
+        ['Write the equation of this function.', `y = |x ${h < 0 ? '+' : '-'} ${Math.abs(h)}| ${k < 0 ? '-' : '+'} ${Math.abs(k)}`],
+        ['State the range of this function.', `y ≥ ${k}`],
+    ];
+    const [question, answer] = randomChoice(tasks);
+
+    return {
+        question,
+        answer,
+        figure: tikz(
+            `  \\draw[step=${cell},black!18,line width=0.25pt] (0,0) grid (${n(2 * max * cell)},${n(2 * max * cell)});\n` +
+            `  \\draw[->] (0,${g(0)}) -- (${n(2 * max * cell + 0.2)},${g(0)}) node[right,font=\\tiny] {$x$};\n` +
+            `  \\draw[->] (${g(0)},0) -- (${g(0)},${n(2 * max * cell + 0.2)}) node[above,font=\\tiny] {$y$};\n` +
+            (left.length > 1 ? `  \\draw[line width=0.8pt] plot coordinates {${left.join(' ')}};\n` : '') +
+            (right.length > 1 ? `  \\draw[line width=0.8pt] plot coordinates {${right.join(' ')}};` : '')
+        ),
+    };
+}
+
+/** A short program as boxes, traced or reversed. */
+function codingFlow(ctx) {
+    const steps = Math.max(3, Math.min(Number(ctx.terms) || 4, 5));
+    const start = between(1, 12);
+    const instructions = [];
+    let value = start;
+    for (let i = 0; i < steps; i += 1) {
+        const amount = between(2, 9);
+        if (Math.random() < 0.5) { instructions.push([`ADD ${amount}`, amount]); value += amount; }
+        else { instructions.push([`SUB ${amount}`, -amount]); value -= amount; }
+    }
+
+    const boxes = instructions.map(([label], i) =>
+        `  \\draw (0,${n(-i * 0.55)}) rectangle (1.75,${n(-i * 0.55 + 0.42)});\n` +
+        `  \\node[font=\\tiny] at (0.875,${n(-i * 0.55 + 0.21)}) {${label}};` +
+        (i < instructions.length - 1 ? `\n  \\draw[->] (0.875,${n(-i * 0.55)}) -- (0.875,${n(-i * 0.55 - 0.13)});` : '')
+    ).join('\n');
+
+    return {
+        question: `The program starts at ${start} and runs top to bottom. What value does it end with?`,
+        answer: `${value}`,
+        figure: tikz(boxes),
+    };
+}
+
+/* ================================================= GEOMETRY, PART TWO */
+
+/** A regular polygon: interior and exterior angles. */
+function polygonAngles(ctx) {
+    const sides = randomChoice([5, 6, 7, 8, 9, 10]);
+    const r = 1.1;
+    const points = Array.from({ length: sides }, (_, i) => {
+        const a = rad(90 + (i * 360) / sides);
+        return `(${n(r * Math.cos(a))},${n(r * Math.sin(a))})`;
+    });
+
+    const interior = (sides - 2) * 180 / sides;
+    const tasks = [
+        ['How many sides does this regular polygon have?', `${sides}`],
+        ['What is the sum of the interior angles?', `${(sides - 2) * 180}°`],
+        ['What is the size of one interior angle?', `${n(interior)}°`],
+        ['What is the size of one exterior angle?', `${n(360 / sides)}°`],
+    ];
+    const [question, answer] = randomChoice(gradeOf(ctx) <= 5 ? tasks.slice(0, 1) : tasks);
+
+    return {
+        question,
+        answer,
+        figure: tikz(`  \\draw ${points.join(' -- ')} -- cycle;`),
+    };
+}
+
+/** Two similar triangles with a scale factor. */
+function similarTriangles(ctx) {
+    const base = between(2, 6);
+    const height = between(2, 6);
+    const factor = between(2, 3);
+    // Scale from the enlarged triangle: sizing on the small one let the big one
+    // run clear off the page.
+    const s = n(Math.min(1.5 / (base * factor), 1.2 / (height * factor)));
+
+    return {
+        question: 'These triangles are similar. Find the missing side length.',
+        answer: `${height * factor}`,
+        figure: tikz(
+            `  \\draw (0,0) -- (${n(base * s)},0) -- (0,${n(height * s)}) -- cycle;\n` +
+            `  \\node[below,font=\\tiny] at (${n(base * s / 2)},0) {$${base}$};\n` +
+            `  \\node[left,font=\\tiny] at (0,${n(height * s / 2)}) {$${height}$};\n` +
+            `  \\draw (${n(base * s + 0.6)},0) -- (${n(base * s + 0.6 + base * factor * s)},0) -- (${n(base * s + 0.6)},${n(height * factor * s)}) -- cycle;\n` +
+            `  \\node[below,font=\\tiny] at (${n(base * s + 0.6 + base * factor * s / 2)},0) {$${base * factor}$};\n` +
+            `  \\node[left,font=\\tiny] at (${n(base * s + 0.6)},${n(height * factor * s / 2)}) {$?$};`
+        ),
+    };
+}
+
+/** A shape with a dashed candidate line of symmetry. */
+function symmetryShape(ctx) {
+    const shapes = [
+        ['a rectangle', '  \\draw (0,0) rectangle (2.2,1.3);\n  \\draw[dashed] (1.1,-0.2) -- (1.1,1.5);', 'yes'],
+        ['a parallelogram', '  \\draw (0,0) -- (1.8,0) -- (2.3,1.1) -- (0.5,1.1) -- cycle;\n  \\draw[dashed] (1.15,-0.2) -- (1.15,1.3);', 'no'],
+        ['an isosceles triangle', '  \\draw (0,0) -- (2.0,0) -- (1.0,1.5) -- cycle;\n  \\draw[dashed] (1.0,-0.2) -- (1.0,1.7);', 'yes'],
+    ];
+    const [, drawing, answer] = randomChoice(shapes);
+
+    return {
+        question: 'Is the dashed line a line of symmetry?',
+        answer,
+        figure: tikz(drawing),
+    };
+}
+
+/** Parallel lines cut by a transversal. */
+function parallelLines(ctx) {
+    const angle = between(35, 70);
+
+    return {
+        question: `The lines are parallel. Find the angle marked with a question mark.`,
+        answer: `${180 - angle}°`,
+        figure: tikz(
+            `  \\draw (0,1.4) -- (3.2,1.4);\n  \\draw (0,0.2) -- (3.2,0.2);\n` +
+            `  \\draw (0.5,-0.2) -- (2.7,1.8);\n` +
+            `  \\node[font=\\tiny] at (1.95,1.6) {$${angle}^{\\circ}$};\n` +
+            `  \\node[font=\\tiny] at (1.05,0.42) {$?$};`
+        ),
+    };
+}
+
+/* ============================================ DATA & PROBABILITY, TWO */
+
+/** A scatter plot with a visible trend. */
+function scatterPlot(ctx) {
+    const direction = randomChoice(['positive', 'negative', 'none']);
+    const cell = 0.28;
+    const max = 10;
+    const points = Array.from({ length: 10 }, (_, i) => {
+        const x = i + 1;
+        const y = direction === 'positive' ? Math.min(max, x + between(-2, 2))
+            : direction === 'negative' ? Math.max(1, max - x + between(-2, 2))
+                : between(1, max);
+        return `  \\filldraw (${n(x * cell)},${n(y * cell)}) circle (1.5pt);`;
+    }).join('\n');
+
+    return {
+        question: 'Does this scatter plot show a positive, negative, or no correlation?',
+        answer: direction === 'none' ? 'no correlation' : `${direction} correlation`,
+        figure: tikz(
+            `  \\draw[->] (0,0) -- (0,${n(max * cell + 0.3)});\n` +
+            `  \\draw[->] (0,0) -- (${n(max * cell + 0.3)},0);\n${points}`
+        ),
+    };
+}
+
+/** A two-stage outcome tree. */
+function treeDiagram(ctx) {
+    const first = randomChoice([['H', 'T'], ['Red', 'Blue']]);
+    const second = randomChoice([['H', 'T'], ['Win', 'Lose']]);
+
+    // Each first-stage branch owns a horizontal band and its second-stage
+    // branches stay inside that band, so no two branches cross.
+    const band = 1.4;
+    const spread = 0.6;
+    const branches = [];
+
+    first.forEach((a, i) => {
+        const y = (first.length - 1 - i) * band;
+        branches.push(`  \\draw (0,${n(((first.length - 1) * band) / 2)}) -- (0.9,${n(y)});`);
+        branches.push(`  \\node[font=\\tiny] at (1.08,${n(y)}) {${a}};`);
+
+        second.forEach((b, k) => {
+            const y2 = y + (second.length - 1 - k) * spread - ((second.length - 1) * spread) / 2;
+            branches.push(`  \\draw (1.3,${n(y)}) -- (2.1,${n(y2)});`);
+            branches.push(`  \\node[right,font=\\tiny] at (2.15,${n(y2)}) {${b}};`);
+        });
+    });
+
+    return {
+        question: 'How many possible outcomes does this tree diagram show?',
+        answer: `${first.length * second.length}`,
+        figure: tikz(branches.join('\n')),
+    };
+}
+
+/** A two-set Venn diagram with counts. */
+function vennDiagram(ctx) {
+    const onlyA = between(3, 12);
+    const both = between(2, 8);
+    const onlyB = between(3, 12);
+    const neither = between(0, 5);
+
+    const tasks = [
+        ['How many are in both sets?', `${both}`],
+        ['How many are in set A in total?', `${onlyA + both}`],
+        ['How many were surveyed altogether?', `${onlyA + both + onlyB + neither}`],
+    ];
+    const [question, answer] = randomChoice(tasks);
+
+    return {
+        question,
+        answer,
+        figure: tikz(
+            `  \\draw (0,0) rectangle (3.4,2.0);\n` +
+            `  \\draw (1.25,1.0) circle (0.78);\n  \\draw (2.15,1.0) circle (0.78);\n` +
+            `  \\node[font=\\tiny] at (0.82,1.0) {${onlyA}};\n` +
+            `  \\node[font=\\tiny] at (1.7,1.0) {${both}};\n` +
+            `  \\node[font=\\tiny] at (2.58,1.0) {${onlyB}};\n` +
+            `  \\node[font=\\tiny] at (3.1,0.25) {${neither}};\n` +
+            `  \\node[font=\\tiny] at (0.72,1.95) {A};\n  \\node[font=\\tiny] at (2.68,1.95) {B};`
+        ),
+    };
+}
+
+/* ======================================= SENIOR FUNCTIONS, PART TWO */
+
+/** A dot pattern growing arithmetically or geometrically. */
+function sequenceDots(ctx) {
+    const geometric = Math.random() < 0.4;
+    const first = between(1, 3);
+    const step = between(2, 3);
+    const terms = 4;
+    const counts = Array.from({ length: terms }, (_, i) => (geometric ? first * step ** i : first + i * step));
+    const next = geometric ? counts[terms - 1] * step : counts[terms - 1] + step;
+
+    let x = 0;
+    const groups = counts.map((count, t) => {
+        const dots = Array.from({ length: Math.min(count, 12) }, (_, i) =>
+            `  \\filldraw (${n(x + (i % 4) * 0.17)},${n(Math.floor(i / 4) * 0.17)}) circle (1.3pt);`
+        ).join('\n');
+        const label = `  \\node[below,font=\\tiny] at (${n(x + 0.25)},-0.08) {${t + 1}};`;
+        x += 0.95;
+        return `${dots}\n${label}`;
+    }).join('\n');
+
+    const tasks = [
+        ['How many dots are in the next figure?', `${next}`],
+        ['Is this sequence arithmetic or geometric?', geometric ? 'geometric' : 'arithmetic'],
+        [geometric ? 'What is the common ratio?' : 'What is the common difference?', `${step}`],
+    ];
+    const [question, answer] = randomChoice(tasks);
+
+    return { question, answer, figure: tikz(groups) };
+}
+
+/** A conic section drawn on axes. */
+function conicShape(ctx) {
+    const kind = randomChoice(['circle', 'ellipse']);
+    const a = between(2, 4);
+    const b = kind === 'circle' ? a : between(1, 4);
+    const cell = 0.3;
+    const max = 5;
+    const g = (v) => n((v + max) * cell);
+
+    return {
+        question: kind === 'circle'
+            ? 'Write the equation of this circle, centred at the origin.'
+            : 'Write the equation of this ellipse, centred at the origin.',
+        answer: kind === 'circle'
+            ? `x² + y² = ${a * a}`
+            : `x²/${a * a} + y²/${b * b} = 1`,
+        figure: tikz(
+            `  \\draw[step=${cell},black!18,line width=0.25pt] (0,0) grid (${n(2 * max * cell)},${n(2 * max * cell)});\n` +
+            `  \\draw[->] (0,${g(0)}) -- (${n(2 * max * cell + 0.2)},${g(0)}) node[right,font=\\tiny] {$x$};\n` +
+            `  \\draw[->] (${g(0)},0) -- (${g(0)},${n(2 * max * cell + 0.2)}) node[above,font=\\tiny] {$y$};\n` +
+            `  \\draw[line width=0.8pt] (${g(0)},${g(0)}) ellipse (${n(a * cell)} and ${n(b * cell)});`
+        ),
+    };
+}
+
+/** A point on the Argand plane. */
+function complexPlane(ctx) {
+    const re = between(-4, 4) || 2;
+    const im = between(-4, 4) || 3;
+    const cell = 0.3;
+    const max = 5;
+    const g = (v) => n((v + max) * cell);
+
+    const tasks = [
+        ['Write the complex number this point represents.', `${re} ${im < 0 ? '-' : '+'} ${Math.abs(im)}i`],
+        ['Find the modulus of this complex number, to 2 decimal places.', `${Math.hypot(re, im).toFixed(2)}`],
+    ];
+    const [question, answer] = randomChoice(tasks);
+
+    return {
+        question,
+        answer,
+        figure: tikz(
+            `  \\draw[step=${cell},black!18,line width=0.25pt] (0,0) grid (${n(2 * max * cell)},${n(2 * max * cell)});\n` +
+            `  \\draw[->] (0,${g(0)}) -- (${n(2 * max * cell + 0.2)},${g(0)}) node[right,font=\\tiny] {Re};\n` +
+            `  \\draw[->] (${g(0)},0) -- (${g(0)},${n(2 * max * cell + 0.2)}) node[above,font=\\tiny] {Im};\n` +
+            `  \\draw[->,line width=0.7pt] (${g(0)},${g(0)}) -- (${g(re)},${g(im)});\n` +
+            `  \\filldraw (${g(re)},${g(im)}) circle (1.8pt);`
+        ),
+    };
+}
+
+/** A shaded region under a straight line. */
+function areaUnderCurve(ctx) {
+    const m = between(1, 3);
+    const upper = between(2, 4);
+    const cell = 0.42;
+    const g = (v) => n(v * cell);
+    const area = (m * upper * upper) / 2;
+
+    const samples = [];
+    for (let x = 0; x <= upper; x += 0.25) samples.push(`(${g(x)},${g(m * x)})`);
+
+    return {
+        question: `Find the exact area under y = ${m}x from x = 0 to x = ${upper}.`,
+        answer: `${n(area)}`,
+        figure: tikz(
+            `  \\fill[black!15] (0,0) -- (${g(upper)},0) -- (${g(upper)},${g(m * upper)}) -- cycle;\n` +
+            `  \\draw[->] (0,0) -- (${g(upper + 1)},0) node[right,font=\\tiny] {$x$};\n` +
+            `  \\draw[->] (0,0) -- (0,${g(m * upper + 1)}) node[above,font=\\tiny] {$y$};\n` +
+            `  \\draw[line width=0.8pt] plot coordinates {${samples.join(' ')}};\n` +
+            `  \\draw[dashed] (${g(upper)},0) -- (${g(upper)},${g(m * upper)});\n` +
+            `  \\node[below,font=\\tiny] at (${g(upper)},0) {$${upper}$};`
+        ),
+    };
+}
+
+/** An open box folded from a sheet with corners cut out. */
+function optimizationBox(ctx) {
+    const sheet = between(10, 20);
+    const cut = between(1, 4);
+    const s = n(2.6 / sheet);
+    const volume = cut * (sheet - 2 * cut) ** 2;
+
+    return {
+        question: `Squares of side ${cut} are cut from the corners of this ${sheet} by ${sheet} sheet and the sides folded up. What is the volume of the open box?`,
+        answer: `${volume} cubic units`,
+        figure: tikz(
+            `  \\draw (0,0) rectangle (${n(sheet * s)},${n(sheet * s)});\n` +
+            `  \\draw (0,0) rectangle (${n(cut * s)},${n(cut * s)});\n` +
+            `  \\draw (${n((sheet - cut) * s)},0) rectangle (${n(sheet * s)},${n(cut * s)});\n` +
+            `  \\draw (0,${n((sheet - cut) * s)}) rectangle (${n(cut * s)},${n(sheet * s)});\n` +
+            `  \\draw (${n((sheet - cut) * s)},${n((sheet - cut) * s)}) rectangle (${n(sheet * s)},${n(sheet * s)});\n` +
+            `  \\node[below,font=\\tiny] at (${n(sheet * s / 2)},0) {$${sheet}$};`
+        ),
+    };
+}
+
+/** A ladder against a wall: the classic related-rates setup. */
+function ladderSlide(ctx) {
+    const [a, b, c] = randomChoice([[3, 4, 5], [6, 8, 10], [5, 12, 13]]);
+    const s = n(2.6 / c);
+
+    return {
+        question: `A ${c} m ladder leans against a wall with its foot ${b} m from the base. How far up the wall does it reach?`,
+        answer: `${a} m`,
+        figure: tikz(
+            `  \\draw[line width=0.9pt] (0,0) -- (0,${n(a * s * 1.6)});\n` +
+            `  \\draw (0,0) -- (${n(b * s * 1.6)},0);\n` +
+            `  \\draw[line width=0.9pt] (0,${n(a * s * 1.6)}) -- (${n(b * s * 1.6)},0);\n` +
+            `  \\draw (0,0.16) -- (0.16,0.16) -- (0.16,0);\n` +
+            `  \\node[below,font=\\tiny] at (${n(b * s * 0.8)},0) {$${b}$};\n` +
+            `  \\node[above right,font=\\tiny] at (${n(b * s * 0.8)},${n(a * s * 0.8)}) {$${c}$};\n` +
+            `  \\node[left,font=\\tiny] at (0,${n(a * s * 0.8)}) {$?$};`
+        ),
+    };
+}
+
+/* ========================================= FINANCIAL LITERACY, TWO */
+
+/** Two packages side by side: which is the better buy. */
+function priceCompare(ctx) {
+    const countA = between(2, 6);
+    const countB = countA * between(2, 3);
+    const priceA = between(2, 9) + 0.99;
+    const priceB = n(priceA * (countB / countA) * randomChoice([0.8, 0.85, 0.9]));
+    const perA = priceA / countA;
+    const perB = priceB / countB;
+
+    return {
+        question: 'Which package is the better value per item?',
+        answer: perA < perB ? `the pack of ${countA}` : `the pack of ${countB}`,
+        figure: tikz(
+            `  \\draw (0,0) rectangle (1.5,1.1);\n` +
+            `  \\node[font=\\tiny] at (0.75,0.72) {${countA} items};\n` +
+            `  \\node[font=\\tiny] at (0.75,0.38) {$\\mathdollar ${priceA.toFixed(2)}$};\n` +
+            `  \\draw (1.9,0) rectangle (3.4,1.1);\n` +
+            `  \\node[font=\\tiny] at (2.65,0.72) {${countB} items};\n` +
+            `  \\node[font=\\tiny] at (2.65,0.38) {$\\mathdollar ${priceB.toFixed(2)}$};`
+        ),
+    };
+}
+
+/** A price tag with a discount on it. */
+function discountTag(ctx) {
+    const price = between(20, 120);
+    const percent = randomChoice([10, 15, 20, 25, 30, 40, 50]);
+    const withTax = Math.random() < 0.4;
+    const sale = price * (1 - percent / 100);
+
+    return {
+        question: withTax
+            ? `Apply the discount, then add 13% tax. What is the final price?`
+            : `What is the sale price after the discount?`,
+        answer: `$${(withTax ? sale * 1.13 : sale).toFixed(2)}`,
+        figure: tikz(
+            `  \\draw (0,0) -- (2.4,0) -- (2.4,1.2) -- (0,1.2) -- cycle;\n` +
+            `  \\filldraw (0.25,0.95) circle (0.07);\n` +
+            `  \\node[font=\\scriptsize] at (1.4,0.82) {$\\mathdollar ${price}.00$};\n` +
+            `  \\node[font=\\scriptsize] at (1.4,0.35) {${percent}\\% off};`
+        ),
+    };
+}
+
+/** Savings growing year by year. */
+function interestBars(ctx) {
+    const principal = randomChoice([500, 1000, 2000]);
+    const rate = between(2, 8);
+    const years = 4;
+    const compound = Math.random() < 0.5;
+    const value = (t) => (compound ? principal * (1 + rate / 100) ** t : principal * (1 + (rate * t) / 100));
+    const top = value(years);
+    const unit = n(2.4 / top);
+
+    const bars = Array.from({ length: years + 1 }, (_, t) =>
+        `  \\fill[black!20,draw=black] (${n(t * 0.62 + 0.2)},0) rectangle (${n(t * 0.62 + 0.62)},${n(value(t) * unit)});\n` +
+        `  \\node[below,font=\\tiny] at (${n(t * 0.62 + 0.41)},0) {${t}};`
+    ).join('\n');
+
+    return {
+        question: `$${principal} is invested at ${rate}% ${compound ? 'compounded annually' : 'simple interest'}. What is it worth after ${years} years?`,
+        answer: `$${value(years).toFixed(2)}`,
+        figure: tikz(
+            `  \\draw[->] (0,0) -- (0,${n(top * unit + 0.35)});\n` +
+            `  \\draw[->] (0,0) -- (${n((years + 1) * 0.62 + 0.3)},0);\n${bars}`
+        ),
+    };
+}
+
+/** Two currency bars at a given rate. */
+function currencyBars(ctx) {
+    // Below 1, so the converted bar is always the shorter of the two and the
+    // picture agrees with the arithmetic.
+    const rate = Number((Math.random() * 0.22 + 0.68).toFixed(2));
+    const amount = between(20, 200);
+
+    return {
+        question: `The bar shows the exchange rate. Convert ${amount} CAD to USD.`,
+        answer: `${(amount * rate).toFixed(2)} USD`,
+        figure: tikz(
+            `  \\fill[black!15,draw=black] (0,0.55) rectangle (3.0,1.0);\n` +
+            `  \\node[font=\\tiny] at (1.5,0.775) {1.00 CAD};\n` +
+            `  \\fill[black!30,draw=black] (0,0) rectangle (${n(3.0 * rate)},0.45);\n` +
+            `  \\node[font=\\tiny] at (${n(1.5 * rate)},0.225) {${rate.toFixed(2)} USD};`
+        ),
+    };
+}
+
 /*
  * What each figure is: how tall it draws, and which grades it suits.
  *
@@ -1358,6 +2069,62 @@ function boxPlot(ctx) {
  * parabola is fair game from Grade 9, but only from Grade 11 does it get
  * asked about as a function.
  */
+ratioTape.heightMm = 14;
+ratioTape.grades = [5, 10];
+factorTree.heightMm = 22;
+factorTree.grades = [4, 9];
+squareRootArea.heightMm = 22;
+squareRootArea.grades = [6, 10];
+operationChain.heightMm = 14;
+operationChain.grades = [3, 9];
+tapeDiagram.heightMm = 16;
+tapeDiagram.grades = [2, 8];
+unitLadder.heightMm = 24;
+unitLadder.grades = [4, 9];
+systemsGraph.heightMm = 34;
+systemsGraph.grades = [9, 12];
+algebraTiles.heightMm = 16;
+algebraTiles.grades = [8, 11];
+areaModel.heightMm = 16;
+areaModel.grades = [3, 10];
+absoluteValueGraph.heightMm = 34;
+absoluteValueGraph.grades = [9, 12];
+codingFlow.heightMm = 26;
+codingFlow.grades = [1, 9];
+polygonAngles.heightMm = 24;
+polygonAngles.grades = [3, 10];
+similarTriangles.heightMm = 20;
+similarTriangles.grades = [7, 11];
+symmetryShape.heightMm = 20;
+symmetryShape.grades = [2, 8];
+parallelLines.heightMm = 24;
+parallelLines.grades = [7, 10];
+scatterPlot.heightMm = 28;
+scatterPlot.grades = [8, 12];
+treeDiagram.heightMm = 26;
+treeDiagram.grades = [6, 12];
+vennDiagram.heightMm = 24;
+vennDiagram.grades = [6, 12];
+sequenceDots.heightMm = 16;
+sequenceDots.grades = [6, 12];
+conicShape.heightMm = 34;
+conicShape.grades = [11, 12];
+complexPlane.heightMm = 34;
+complexPlane.grades = [11, 12];
+areaUnderCurve.heightMm = 28;
+areaUnderCurve.grades = [11, 12];
+optimizationBox.heightMm = 26;
+optimizationBox.grades = [11, 12];
+ladderSlide.heightMm = 26;
+ladderSlide.grades = [9, 12];
+priceCompare.heightMm = 16;
+priceCompare.grades = [4, 12];
+discountTag.heightMm = 18;
+discountTag.grades = [6, 12];
+interestBars.heightMm = 28;
+interestBars.grades = [7, 12];
+currencyBars.heightMm = 14;
+currencyBars.grades = [7, 12];
 tenFrame.heightMm = 14;
 tenFrame.grades = [1, 2];
 placeValueBlocks.heightMm = 13;
@@ -1459,6 +2226,11 @@ export const VISUAL_PROBLEMS = {
     'integers': [numberLine, thermometer],
     'patterns': [growingPattern, numberLine],
     'estimation': [numberLine],
+    'word-problems': [tapeDiagram, areaModel],
+    'ratios-proportions': [ratioTape, similarTriangles],
+    'exponents-roots': [squareRootArea],
+    'order-of-operations': [operationChain],
+    'factors-multiples': [factorTree, squareRootArea],
 
     // Measurement
     'length': [ruler],
@@ -1467,6 +2239,7 @@ export const VISUAL_PROBLEMS = {
     'capacity-volume': [beaker],
     'weight-mass': [balanceScale],
     'metric-customary': [ruler, beaker],
+    'unit-conversions': [unitLadder],
 
     // Geometry
     '2d-shapes': [rectangleMeasure, compositeShape],
@@ -1475,11 +2248,13 @@ export const VISUAL_PROBLEMS = {
     'volume-surface': [solidVolume],
     'triangles': [rightTriangle, angleMeasure],
     'pythagorean-theorem': [rightTriangle],
-    'angles': [angleMeasure],
+    'angles': [angleMeasure, parallelLines],
     'circles': [circleMeasure],
     'coordinate-geometry': [coordinateGrid, linearGraph],
     'transformations': [transformation],
-    'symmetry': [transformation],
+    'symmetry': [symmetryShape, transformation],
+    'polygons': [polygonAngles],
+    'congruence-similarity': [similarTriangles],
 
     // Data and probability
     'bar-graphs': [barGraph],
@@ -1489,6 +2264,9 @@ export const VISUAL_PROBLEMS = {
     'data-analysis': [lineGraph, linePlot, boxPlot],
     'mean-median-mode': [linePlot, barGraph, boxPlot],
     'probability': [spinner],
+    'sampling': [vennDiagram],
+    'correlation': [scatterPlot],
+    'counting-principles': [treeDiagram],
 
     // Algebra
     'expressions': [functionMachine],
@@ -1496,6 +2274,13 @@ export const VISUAL_PROBLEMS = {
     'linear-relations': [linearGraph, growingPattern],
     'functions': [linearGraph, functionMachine, parabola, exponentialCurve],
     'inequalities': [inequalityLine],
+    'systems': [systemsGraph],
+    'polynomials': [algebraTiles],
+    'exponents-radicals': [squareRootArea, algebraTiles],
+    'rational-expressions': [areaModel],
+    'absolute-value': [absoluteValueGraph],
+    'factoring': [algebraTiles, areaModel],
+    'coding': [codingFlow],
 
     // Trigonometry
     'right-triangles': [trigTriangle],
@@ -1513,6 +2298,13 @@ export const VISUAL_PROBLEMS = {
     'derivatives': [tangentLine, polynomialCurve],
     'limits': [tangentLine, rationalAsymptote],
     'vectors-matrices': [vectorSum],
+    'sequences-series': [sequenceDots],
+    'conic-sections': [conicShape],
+    'parametric-polar': [conicShape],
+    'complex-numbers': [complexPlane],
+    'integrals': [areaUnderCurve],
+    'optimization': [optimizationBox],
+    'related-rates': [ladderSlide],
     'applications': [trigTriangle, tangentLine],
 
     // Financial literacy
@@ -1520,4 +2312,9 @@ export const VISUAL_PROBLEMS = {
     'making-change': [coins],
     'money': [coins],
     'budgeting': [budgetPie],
+    'unit-price': [priceCompare],
+    'sales-tax-discount': [discountTag],
+    'simple-interest': [interestBars],
+    'compound-interest': [interestBars],
+    'currency-exchange': [currencyBars],
 };
