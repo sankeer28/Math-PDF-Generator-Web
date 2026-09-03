@@ -7,8 +7,50 @@
 import { WorksheetGenerator, LatexError, fileNameStem } from '../latex/worksheetGenerator.js';
 import { ProgressManager } from './progressManager.js';
 import { createZip, saveBlob } from './zip.js';
+import { History } from './history.js';
 import { GRADE_CONFIGS, SUBJECT_TOPICS } from './constants.js';
 import { parametersForTopic, defaultParameterValues } from '../curriculum/config/parameters.js';
+
+/** Sets a control's value, ignoring anything the saved entry did not carry. */
+function setValue(id, value) {
+    const element = document.getElementById(id);
+    if (element && value !== undefined && value !== null) element.value = String(value);
+}
+
+/** The short list of facts that identify a past run. */
+function describeOptions(options) {
+    const subjects = options.subjects || [];
+    const parts = [
+        GRADE_CONFIGS[options.gradeLevel]?.name || options.gradeLevel,
+        capitalize(options.difficulty),
+        subjects.length === 1 ? subjectLabel(subjects[0]) : `${subjects.length} subjects`,
+        options.problemType === 'mixed' ? 'Mixed format' : capitalize(options.problemType),
+        `${options.numPages} page${options.numPages === 1 ? '' : 's'}`,
+        options.paperSize === 'a4' ? 'A4' : 'Letter',
+    ];
+    if (options.topics !== 'all' && Array.isArray(options.topics)) {
+        parts.push(`${options.topics.length} topics`);
+    }
+    if (options.answerKey === 'separate') parts.push('Answer key');
+    if (Number(options.numPDFs) > 1) parts.push(`\u00d7${options.numPDFs} copies`);
+    return parts;
+}
+
+/** "12 min ago" reads better than a timestamp for something this recent. */
+function formatWhen(savedAt) {
+    const seconds = Math.round((Date.now() - savedAt) / 1000);
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} d ago`;
+    return new Date(savedAt).toLocaleDateString();
+}
+
+/** Sentence case for a single lower-case word coming from the form. */
+function capitalize(text) {
+    const value = String(text || '');
+    return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 /** A subject's display name, from the curriculum data rather than a copy of it. */
 function subjectLabel(subjectId) {
@@ -20,13 +62,21 @@ export class FormManager {
         this.form = document.getElementById('pdfForm');
         this.worksheetGenerator = new WorksheetGenerator();
         this.progress = new ProgressManager();
+        this.history = new History();
         this.currentPDFBlobUrl = null;
+        this.previewTimer = null;
+        this.previewRunning = false;
+        this.previewAgain = false;
         this.initializeForm();
 
         // The TeX bundle is a few megabytes; fetch it while the teacher is still
         // choosing options rather than making them wait once they hit Generate.
         this.worksheetGenerator.prepare().then(
-            () => this.setEngineStatus('ready', 'LaTeX engine ready'),
+            () => {
+                // Nothing to announce once it works: the preview appearing says so.
+                this.setEngineStatus('ready');
+                this.schedulePreview(0);
+            },
             (error) => {
                 console.error('The LaTeX engine failed to load:', error);
                 this.setEngineStatus('error', 'The LaTeX engine could not load. Check your connection and reload the page.');
@@ -35,6 +85,12 @@ export class FormManager {
     }
 
     initializeForm() {
+        // Validation is ours (validateFormData) and values are clamped again in
+        // the generator. Native validation would also refuse to submit whenever
+        // a control in a hidden tab panel is invalid, and cannot focus it to say
+        // why, so the download would fail with nothing but a console warning.
+        this.form.noValidate = true;
+
         this.populateGradeLevels();
 
         // Form submission
@@ -64,10 +120,36 @@ export class FormManager {
         this.updateTopicOptions();
         this.toggleOperationsVisibility();
 
-        // Initialize accordion toggles
-        this.initializeAccordions();
+        // "All subjects" is part of the static markup, so it binds once.
+        document.getElementById('subject-all').addEventListener('change', (event) => {
+            for (const checkbox of document.querySelectorAll('.subject-checkbox')) {
+                checkbox.checked = event.target.checked;
+            }
+            this.updateOperationTypesForSubject();
+            this.updateProblemTypeForSubject();
+            this.updateTopicOptions();
+            this.updateWorksheetTitle();
+            this.toggleOperationsVisibility();
+        });
 
-        // Set initial worksheet title
+        document.getElementById('topic-all').addEventListener('change', (event) => {
+            for (const checkbox of document.querySelectorAll('.topic-checkbox')) {
+                checkbox.checked = event.target.checked;
+            }
+        });
+
+        // Any settings change re-typesets the preview, so the pane always shows
+        // what the current options produce.
+        this.form.addEventListener('input', () => this.schedulePreview());
+        this.form.addEventListener('change', () => this.schedulePreview());
+
+        document.getElementById('historyClear').addEventListener('click', () => {
+            this.history.clear();
+            this.renderHistory();
+        });
+
+        this.initializeTabs();
+        this.renderHistory();
         this.updateWorksheetTitle();
     }
 
@@ -87,23 +169,40 @@ export class FormManager {
         }));
     }
 
-    initializeAccordions() {
-        const accordionToggles = document.querySelectorAll('.form-accordion-toggle');
+    /**
+     * Turns the four sections into tabs.
+     *
+     * Only one section is visible at a time, so the settings column stays about
+     * a screen tall instead of scrolling past four stacked panels. Hidden
+     * panels stay in the DOM, so every control is still readable by the form.
+     */
+    initializeTabs() {
+        const tabs = [...document.querySelectorAll('.step-link')];
+        if (tabs.length === 0) return;
 
-        accordionToggles.forEach(toggle => {
-            toggle.addEventListener('click', () => {
-                const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-                const content = toggle.nextElementSibling;
+        const select = (chosen) => {
+            for (const tab of tabs) {
+                const panel = document.getElementById(tab.getAttribute('aria-controls'));
+                const isChosen = tab === chosen;
+                tab.setAttribute('aria-selected', String(isChosen));
+                tab.classList.toggle('is-active', isChosen);
+                if (panel) panel.hidden = !isChosen;
+            }
+        };
 
-                if (isExpanded) {
-                    toggle.setAttribute('aria-expanded', 'false');
-                    content.classList.remove('expanded');
-                } else {
-                    toggle.setAttribute('aria-expanded', 'true');
-                    content.classList.add('expanded');
-                }
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => select(tab));
+            tab.addEventListener('keydown', (event) => {
+                const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+                if (step === 0) return;
+                event.preventDefault();
+                const next = tabs[(index + step + tabs.length) % tabs.length];
+                next.focus();
+                select(next);
             });
         });
+
+        select(tabs[0]);
     }
 
     updateWorksheetTitle() {
@@ -161,64 +260,58 @@ export class FormManager {
         }
     }
 
+    /**
+     * Renders the subject chips for the current grade.
+     *
+     * The "All" checkbox is part of the static markup, so it is bound once in
+     * initializeForm(); only the chips are rebuilt here.
+     */
     updateSubjectOptions() {
         const gradeLevel = document.getElementById('gradeLevel').value;
-        const subjectContainer = document.getElementById('subjectSelection');
-        const availableSubjects = GRADE_CONFIGS[gradeLevel].subjects;
+        const container = document.getElementById('subjectSelection');
 
-        // Clear current checkboxes
-        subjectContainer.innerHTML = `
-            <label class="checkbox-label">
-                <input type="checkbox" value="all" id="subject-all" class="checkbox-input" checked>
-                <span class="checkbox-text">All Subjects</span>
-            </label>
-        `;
-
-        // Add checkboxes for each available subject
-        availableSubjects.forEach(subject => {
+        container.replaceChildren(...GRADE_CONFIGS[gradeLevel].subjects.map((subject) => {
             const label = document.createElement('label');
-            label.className = 'checkbox-label';
+            label.className = 'chip';
             label.innerHTML = `
                 <input type="checkbox" value="${subject}" class="checkbox-input subject-checkbox" checked>
-                <span class="checkbox-text">${subjectLabel(subject)}</span>
+                <span class="chip-text">${subjectLabel(subject)}</span>
             `;
-            subjectContainer.appendChild(label);
-        });
+            label.title = SUBJECT_TOPICS[subject]?.description || '';
+            return label;
+        }));
 
-        // Setup "All Subjects" checkbox behavior
-        const allSubjectsCheckbox = document.getElementById('subject-all');
-        const subjectCheckboxes = document.querySelectorAll('.subject-checkbox');
-
-        allSubjectsCheckbox.addEventListener('change', () => {
-            subjectCheckboxes.forEach(checkbox => {
-                checkbox.checked = allSubjectsCheckbox.checked;
-            });
-            this.updateOperationTypesForSubject();
-            this.updateTopicOptions();
-        });
-
-        subjectCheckboxes.forEach(checkbox => {
+        for (const checkbox of container.querySelectorAll('.subject-checkbox')) {
             checkbox.addEventListener('change', () => {
-                const allChecked = Array.from(subjectCheckboxes).every(cb => cb.checked);
-                const noneChecked = Array.from(subjectCheckboxes).every(cb => !cb.checked);
-
-                if (allChecked) {
-                    allSubjectsCheckbox.checked = true;
-                } else if (noneChecked) {
-                    allSubjectsCheckbox.checked = false;
-                } else {
-                    allSubjectsCheckbox.checked = false;
-                }
-
+                this.syncAllSubjectsCheckbox();
                 this.updateOperationTypesForSubject();
+                this.updateProblemTypeForSubject();
                 this.updateTopicOptions();
+                this.updateWorksheetTitle();
+                this.toggleOperationsVisibility();
             });
-        });
+        }
 
-        // Update operation types and problem type based on subject
+        this.syncAllSubjectsCheckbox();
         this.updateOperationTypesForSubject();
         this.updateProblemTypeForSubject();
         this.updateTopicOptions();
+    }
+
+    /** Keeps the "All" topic checkbox in step with the individual topics. */
+    syncAllTopicsCheckbox() {
+        const boxes = [...document.querySelectorAll('.topic-checkbox')];
+        const all = document.getElementById('topic-all');
+        all.checked = boxes.length > 0 && boxes.every((box) => box.checked);
+        all.indeterminate = !all.checked && boxes.some((box) => box.checked);
+    }
+
+    /** Keeps the "All" subject checkbox in step with the individual chips. */
+    syncAllSubjectsCheckbox() {
+        const boxes = [...document.querySelectorAll('.subject-checkbox')];
+        const all = document.getElementById('subject-all');
+        all.checked = boxes.length > 0 && boxes.every((box) => box.checked);
+        all.indeterminate = !all.checked && boxes.some((box) => box.checked);
     }
 
     updateTopicOptions() {
@@ -232,22 +325,14 @@ export class FormManager {
         const topicContainer = document.getElementById('topicSelection');
 
         if (selectedSubjects.length === 0) {
-            topicContainer.innerHTML = `
-                <label class="checkbox-label">
-                    <input type="checkbox" value="all" id="topic-all" class="checkbox-input" checked>
-                    <span class="checkbox-text">All Topics</span>
-                </label>
-            `;
+            const empty = document.createElement('p');
+            empty.className = 'field-help';
+            empty.textContent = 'Choose a subject to see its topics.';
+            topicContainer.replaceChildren(empty);
             return;
         }
 
-        // Clear existing topics - "All Topics" checkbox starts checked
-        topicContainer.innerHTML = `
-            <label class="checkbox-label">
-                <input type="checkbox" value="all" id="topic-all" class="checkbox-input" checked>
-                <span class="checkbox-text">All Topics</span>
-            </label>
-        `;
+        topicContainer.replaceChildren();
 
         // Add topics from each selected subject, grouped by subject
         selectedSubjects.forEach(subjectId => {
@@ -268,7 +353,6 @@ export class FormManager {
                 // Add subject header (non-interactive)
                 const headerDiv = document.createElement('div');
                 headerDiv.className = 'topic-subject-header';
-                headerDiv.style.cssText = 'grid-column: 1 / -1; font-weight: 600; color: var(--accent-primary); margin-top: 8px; font-size: 0.875rem;';
                 headerDiv.textContent = subjectLabel(subjectId);
                 topicContainer.appendChild(headerDiv);
 
@@ -279,28 +363,12 @@ export class FormManager {
             }
         });
 
-        // Setup "All Topics" checkbox behavior
-        const allTopicsCheckbox = document.getElementById('topic-all');
-        const topicCheckboxes = document.querySelectorAll('.topic-checkbox');
-
-        allTopicsCheckbox.addEventListener('change', () => {
-            topicCheckboxes.forEach(checkbox => {
-                checkbox.checked = allTopicsCheckbox.checked;
-            });
-        });
-
-        topicCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                const allChecked = Array.from(topicCheckboxes).every(cb => cb.checked);
-                const noneChecked = Array.from(topicCheckboxes).every(cb => !cb.checked);
-
-                if (allChecked) {
-                    allTopicsCheckbox.checked = true;
-                } else {
-                    allTopicsCheckbox.checked = false;
-                }
-            });
-        });
+        // The topics themselves are rebuilt on every change, so they bind here;
+        // "All topics" is static markup and binds once, in initializeForm().
+        for (const checkbox of topicContainer.querySelectorAll('.topic-checkbox')) {
+            checkbox.addEventListener('change', () => this.syncAllTopicsCheckbox());
+        }
+        this.syncAllTopicsCheckbox();
     }
 
 
@@ -439,6 +507,8 @@ export class FormManager {
         if (parameter.type === 'boolean') {
             input = document.createElement('input');
             input.type = 'checkbox';
+            // Shares the app's checkbox styling rather than the browser default.
+            input.classList.add('checkbox-input');
             input.checked = Boolean(parameter.default);
         } else if (parameter.type === 'select') {
             input = document.createElement('select');
@@ -459,7 +529,7 @@ export class FormManager {
         }
 
         input.id = id;
-        input.className = 'topic-parameter-input';
+        input.classList.add('topic-parameter-input');
         input.dataset.topic = topicId;
         input.dataset.parameter = parameter.id;
         input.dataset.type = parameter.type;
@@ -710,6 +780,9 @@ export class FormManager {
 
     /** Saves a single PDF directly, or several as one ZIP. */
     deliver(worksheets, formData) {
+        this.history.add(formData);
+        this.renderHistory();
+
         const stem = fileNameStem(formData.pdfTitle);
 
         if (worksheets.length === 1) {
@@ -721,37 +794,84 @@ export class FormManager {
         saveBlob(zip, `${stem}_worksheets.zip`);
     }
 
-    async handlePDFPreview() {
-        const formData = this.getFormData();
+    /** The Preview button: re-rolls the problems and reports any problem loudly. */
+    handlePDFPreview() {
+        return this.renderPreview({ announce: true });
+    }
 
-        const basicErrors = this.validateFormData(formData).filter(error =>
-            !['generation-size', 'numPDFs', 'numPages'].includes(error.field)
-        );
+    /**
+     * Queues an automatic preview.
+     *
+     * Typesetting takes a moment, so edits are coalesced: only the last change
+     * in a burst is typeset, and the settings are read when the run starts
+     * rather than when it was queued.
+     */
+    schedulePreview(delay = 650) {
+        clearTimeout(this.previewTimer);
+        this.previewTimer = setTimeout(() => this.renderPreview(), delay);
+    }
 
-        if (basicErrors.length > 0) {
-            this.showValidationErrors(basicErrors);
+    /**
+     * Typesets one worksheet into the preview pane.
+     *
+     * @param {object} [options]
+     * @param {boolean} [options.announce] - show progress and surface errors;
+     *   automatic previews stay quiet so they cannot interrupt typing
+     */
+    async renderPreview({ announce = false } = {}) {
+        // A run is already in flight: remember to repeat it with the newer settings.
+        if (this.previewRunning) {
+            this.previewAgain = true;
             return;
         }
 
-        this.clearValidationErrors();
-        this.setFormEnabled(false);
-        this.progress.show();
+        const formData = this.getFormData();
+        const blocking = this.validateFormData(formData).filter((error) =>
+            !['generation-size', 'numPDFs', 'numPages'].includes(error.field)
+        );
+
+        if (blocking.length > 0) {
+            if (announce) this.showValidationErrors(blocking);
+            return;
+        }
+        if (announce) this.clearValidationErrors();
+
+        this.previewRunning = true;
+        this.setPreviewBusy(true);
+        if (announce) this.progress.show();
 
         try {
             if (!this.worksheetGenerator.isEngineReady) {
-                this.progress.updateProgress(10, 'Loading the LaTeX engine...');
+                if (announce) this.progress.updateProgress(10, 'Loading the LaTeX engine...');
                 await this.worksheetGenerator.prepare();
             }
 
-            this.progress.updateProgress(50, 'Typesetting the preview...');
+            if (announce) this.progress.updateProgress(50, 'Typesetting the preview...');
             const { pdf, source } = await this.worksheetGenerator.generateOne(formData);
             this.showPreview(pdf, source, formData);
         } catch (error) {
-            this.reportLatexFailure(error, 'typeset this preview');
+            if (announce) this.reportLatexFailure(error, 'typeset this preview');
+            else console.error('Automatic preview failed:', error);
         } finally {
-            this.progress.hide();
-            this.setFormEnabled(true);
+            this.previewRunning = false;
+            this.setPreviewBusy(false);
+            if (announce) this.progress.hide();
+
+            if (this.previewAgain) {
+                this.previewAgain = false;
+                this.schedulePreview(0);
+            }
         }
+    }
+
+    /** Dims the preview, and spins the regenerate icon, while one is typeset. */
+    setPreviewBusy(busy) {
+        document.getElementById('preview-container')?.classList.toggle('is-busy', busy);
+
+        const button = document.getElementById('previewBtn');
+        if (!button) return;
+        button.disabled = busy;
+        button.querySelector('i')?.classList.toggle('fa-spin', busy);
     }
 
     showPreview(pdf, source, formData) {
@@ -770,47 +890,40 @@ export class FormManager {
 
         container.style.display = 'block';
         container.classList.add('show');
-        setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+        // On a wide screen the preview already sits beside the form; scrolling to
+        // it would only push the Preview and Generate buttons out of view.
+        if (window.matchMedia('(max-width: 1100px)').matches) {
+            setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+        }
     }
 
+    /**
+     * A one-line summary of what was typeset, as small pills.
+     *
+     * The earlier term/description grid was accurate but ate a third of the
+     * preview pane; the same facts fit on a line or two this way.
+     */
     buildPreviewSummary(formData) {
-        const operations = formData.operations.length === 1
-            ? formData.operations[0]
-            : `Mixed (${formData.operations.join(', ')})`;
-
-        const subjects = (formData.subjects || [])
-            .map((subject) => SUBJECT_TOPICS[subject]?.name || subject)
-            .join(', ');
+        const subjects = formData.subjects || [];
+        const pills = [
+            GRADE_CONFIGS[formData.gradeLevel]?.name || formData.gradeLevel,
+            capitalize(formData.difficulty),
+            subjects.length === 1 ? subjectLabel(subjects[0]) : `${subjects.length} subjects`,
+            formData.problemType === 'mixed' ? 'Mixed format' : capitalize(formData.problemType),
+            `${formData.numPages} page${formData.numPages === 1 ? '' : 's'}`,
+            formData.paperSize === 'a4' ? 'A4' : 'Letter',
+        ];
+        if (formData.answerKey === 'separate') pills.push('Answer key');
+        if (Number(formData.numPDFs) > 1) pills.push(`×${formData.numPDFs} copies`);
 
         const summary = document.createElement('div');
         summary.className = 'preview-summary';
-
-        const heading = document.createElement('h4');
-        heading.textContent = 'Preview settings';
-        summary.appendChild(heading);
-
-        const grid = document.createElement('dl');
-        grid.className = 'preview-summary-grid';
-        const rows = [
-            ['Grade', GRADE_CONFIGS[formData.gradeLevel]?.name || formData.gradeLevel],
-            ['Subjects', subjects || 'All'],
-            ['Difficulty', formData.difficulty],
-            ['Problem type', formData.problemType === 'mixed' ? 'Mixed format' : formData.problemType],
-            ['Operations', operations],
-            ['Pages', `${formData.numPages}`],
-            ['Paper', formData.paperSize === 'a4' ? 'A4' : 'Letter'],
-            ['Answer key', formData.answerKey === 'separate' ? 'Yes' : 'No'],
-        ];
-
-        for (const [label, value] of rows) {
-            const term = document.createElement('dt');
-            term.textContent = label;
-            const description = document.createElement('dd');
-            description.textContent = value;
-            grid.append(term, description);
-        }
-
-        summary.appendChild(grid);
+        summary.append(...pills.map((text) => {
+            const pill = document.createElement('span');
+            pill.className = 'preview-pill';
+            pill.textContent = text;
+            return pill;
+        }));
         return summary;
     }
 
@@ -825,19 +938,173 @@ export class FormManager {
         this.showGeneralError(`Could not ${action}.${detail} Please try again.`, 'error');
     }
 
-    /** Tells the user where the engine is, since the first load takes a moment. */
-    setEngineStatus(state, message) {
-        const element = document.getElementById('engine-status');
-        if (!element) return;
-        element.className = `engine-status engine-status-${state}`;
-        element.textContent = message;
+    /**
+     * Draws the history panel: one row per past download, showing what was
+     * chosen and offering to put those settings back.
+     */
+    renderHistory() {
+        const list = document.getElementById('historyList');
+        if (!list) return;
+
+        const entries = this.history.list();
+        document.getElementById('historyClear').hidden = entries.length === 0;
+
+        if (entries.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'field-help';
+            empty.textContent = 'Nothing yet. Worksheets you download will be listed here.';
+            list.replaceChildren(empty);
+            return;
+        }
+
+        list.replaceChildren(...entries.map((entry) => this.buildHistoryRow(entry)));
     }
 
-    setFormEnabled(enabled) {
-        const inputs = this.form.querySelectorAll('input, select, button');
-        inputs.forEach(input => {
-            input.disabled = !enabled;
+    /** @returns {HTMLElement} one history row */
+    buildHistoryRow(entry) {
+        const { options } = entry;
+        const row = document.createElement('div');
+        row.className = 'history-row';
+
+        const head = document.createElement('div');
+        head.className = 'history-head';
+
+        const title = document.createElement('span');
+        title.className = 'history-title';
+        title.textContent = options.pdfTitle || 'Untitled worksheet';
+
+        const when = document.createElement('time');
+        when.className = 'history-when';
+        when.dateTime = new Date(entry.savedAt).toISOString();
+        when.textContent = formatWhen(entry.savedAt);
+
+        head.append(title, when);
+
+        const pills = document.createElement('div');
+        pills.className = 'history-pills';
+        for (const text of describeOptions(options)) {
+            const pill = document.createElement('span');
+            pill.className = 'preview-pill';
+            pill.textContent = text;
+            pills.appendChild(pill);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'history-actions';
+
+        const load = document.createElement('button');
+        load.type = 'button';
+        load.className = 'quiet-btn';
+        load.innerHTML = '<i class="fas fa-rotate-left"></i> Load these settings';
+        load.addEventListener('click', () => this.applyOptions(options));
+
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'quiet-btn';
+        remove.title = 'Remove from history';
+        remove.setAttribute('aria-label', 'Remove from history');
+        remove.innerHTML = '<i class="fas fa-xmark"></i>';
+        remove.addEventListener('click', () => {
+            this.history.remove(entry.id);
+            this.renderHistory();
         });
+
+        actions.append(load, remove);
+        row.append(head, pills, actions);
+        return row;
+    }
+
+    /**
+     * Puts a saved set of options back into the form.
+     *
+     * Order matters: the grade decides which subjects exist, the subjects decide
+     * which topics exist, and the topics carry the parameter controls, so each
+     * list has to be rebuilt before the next selection can be applied.
+     */
+    applyOptions(options) {
+        setValue('gradeLevel', options.gradeLevel);
+        this.updateSubjectOptions();
+
+        const subjects = new Set(options.subjects || []);
+        for (const checkbox of document.querySelectorAll('.subject-checkbox')) {
+            checkbox.checked = subjects.has(checkbox.value);
+        }
+        this.syncAllSubjectsCheckbox();
+        this.updateOperationTypesForSubject();
+        this.updateProblemTypeForSubject();
+        this.toggleOperationsVisibility();
+        this.updateTopicOptions();
+
+        const wantsAllTopics = options.topics === 'all';
+        const topics = new Set(wantsAllTopics ? [] : options.topics || []);
+        for (const checkbox of document.querySelectorAll('.topic-checkbox')) {
+            checkbox.checked = wantsAllTopics || topics.has(checkbox.value.split(':').pop());
+        }
+        this.syncAllTopicsCheckbox();
+
+        for (const input of document.querySelectorAll('.topic-parameter-input')) {
+            const saved = options.topicParameters?.[input.dataset.topic]?.[input.dataset.parameter];
+            if (saved === undefined) continue;
+            if (input.dataset.type === 'boolean') input.checked = Boolean(saved);
+            else input.value = String(saved);
+        }
+
+        const operations = new Set(options.operations || []);
+        for (const checkbox of document.querySelectorAll('input[type="checkbox"][id^="op-"]')) {
+            checkbox.checked = operations.has(checkbox.value);
+        }
+
+        const difficulty = { easy: '1', medium: '2', hard: '3' }[options.difficulty] || '2';
+        setValue('difficulty', difficulty);
+        this.updateDifficultyLabel(difficulty);
+
+        setValue('problemType', options.problemType);
+        setValue('answerKey', options.answerKey);
+        setValue('numPDFs', options.numPDFs);
+        setValue('numPages', options.numPages);
+        setValue('pdfTitle', options.pdfTitle);
+        setValue('showTitle', options.showTitle);
+        setValue('paperSize', options.paperSize);
+        setValue('pageNumberPosition', options.pageNumberPosition);
+
+        for (const id of ['showName', 'showDate', 'showScore', 'showGrade',
+            'showPageBorder', 'showPageNumberBox', 'showNumberCircles']) {
+            const element = document.getElementById(id);
+            if (element) element.checked = Boolean(options[id]);
+        }
+
+        this.schedulePreview(0);
+    }
+
+    /**
+     * Reports the engine only while that is worth saying.
+     *
+     * The first visit downloads several megabytes, so "loading" explains the
+     * wait, and a failure has to be visible or nothing works for no apparent
+     * reason. Success needs no label: the preview shows up.
+     */
+    setEngineStatus(state, message = '') {
+        const element = document.getElementById('engine-status');
+        if (!element) return;
+
+        element.className = `engine-status engine-status-${state}`;
+        element.textContent = message;
+        element.hidden = state === 'ready';
+    }
+
+    /**
+     * Locks the settings while a download is being produced.
+     *
+     * The two actions sit outside the form element, so they are named here as
+     * well; otherwise Download stayed live during its own run.
+     */
+    setFormEnabled(enabled) {
+        for (const input of this.form.querySelectorAll('input, select, button')) {
+            input.disabled = !enabled;
+        }
+        for (const button of document.querySelectorAll('.preview-actions .btn, #previewBtn')) {
+            button.disabled = !enabled;
+        }
     }
 }
 

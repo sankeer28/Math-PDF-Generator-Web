@@ -33,7 +33,9 @@ export const PARAMETER_DEFINITIONS = {
         default: 100,
         min: 5,
         max: 1000000,
-        step: 5,
+        // Step 1: topics set ceilings like 12 or 25, and a value off the step
+        // grid makes the control :invalid, which silently blocks form submit.
+        step: 1,
     },
 
     minNumber: {

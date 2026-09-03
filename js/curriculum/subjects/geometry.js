@@ -7,7 +7,7 @@ import { gradeRange } from '../config/grades.js';
 
 export const geometry = {
     id: 'geometry',
-    name: 'Geometry & Spatial Sense',
+    name: 'Geometry',
     description: 'Shape, position, transformation and measurement of figures',
     icon: 'shapes',
     strand: 'E',

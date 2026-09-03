@@ -18,259 +18,305 @@
     <link rel="preload" href="vendor/texlive/texlive.bundle.gz" as="fetch" crossorigin="anonymous">
 </head>
 <body>
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <h1 class="hero-title fade-in-up">
-                <i class="fas fa-graduation-cap"></i>
-                Math-PDF-Generator
-            </h1>
-            <p class="hero-subtitle fade-in-up">Create professional math worksheets for any grade level with customizable difficulty and subjects</p>
+
+<!-- ============================================================= App bar -->
+<header class="appbar">
+    <a class="appbar-brand" href="./">
+        <img class="appbar-logo" src="favicon.svg" alt="" width="26" height="26">
+        <span>Math<span class="appbar-brand-thin">&nbsp;PDF Generator</span></span>
+    </a>
+
+    <p id="engine-status" class="engine-status" role="status">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        Loading the LaTeX engine&hellip;
+    </p>
+
+    <div class="appbar-actions">
+        <button type="button" class="icon-btn theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">
+            <i class="fas fa-moon"></i>
+        </button>
+        <a class="icon-btn" href="https://github.com/sankeer28/Math-PDF-Generator-Web"
+           target="_blank" rel="noopener noreferrer" title="View on GitHub" aria-label="View on GitHub">
+            <i class="fab fa-github"></i>
+        </a>
+    </div>
+</header>
+
+<!-- ========================================================== Workspace -->
+<main class="workspace">
+
+    <!-- ------------------------------------------------ Settings column -->
+    <div class="settings-column">
+        <div class="step-nav" role="tablist" aria-label="Settings sections">
+            <button type="button" class="step-link" role="tab" aria-controls="step-level" aria-selected="true">
+                <span class="step-num">1</span>Level
+            </button>
+            <button type="button" class="step-link" role="tab" aria-controls="step-content" aria-selected="false">
+                <span class="step-num">2</span>Content
+            </button>
+            <button type="button" class="step-link" role="tab" aria-controls="step-format" aria-selected="false">
+                <span class="step-num">3</span>Format
+            </button>
+            <button type="button" class="step-link" role="tab" aria-controls="step-appearance" aria-selected="false">
+                <span class="step-num">4</span>Appearance
+            </button>
+            <button type="button" class="step-link" role="tab" aria-controls="step-history" aria-selected="false">
+                <span class="step-num">5</span>History
+            </button>
         </div>
-    </section>
 
-    <!-- Main Generator Section -->
-    <section class="section">
-        <div class="container">
-            <form id="pdfForm" class="generator-form">
+        <form id="pdfForm" class="settings-form">
 
-                <!-- Student Level Configuration -->
-                <div class="form-section card fade-in-up">
-                    <h3 class="form-section-title">
-                        <i class="fas fa-graduation-cap"></i>
-                        Student Level
-                    </h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="gradeLevel" class="form-label">Grade Level</label>
-                            <select id="gradeLevel" class="form-select">
-                                <!-- Populated from the curriculum data by FormManager -->
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="difficulty" class="form-label">Difficulty Level</label>
-                            <div class="range-group">
-                                <input type="range" id="difficulty" class="range-input" min="1" max="3" value="2">
-                                <div class="range-labels">
-                                    <span>Easy</span>
-                                    <span id="difficultyLabel" class="font-semibold">Medium</span>
-                                    <span>Hard</span>
-                                </div>
-                            </div>
+            <!-- ------------------------------------------------ 1. Level -->
+            <section class="settings-panel" id="step-level" role="tabpanel" aria-label="Level">
+                <p class="settings-panel-hint">Who is this worksheet for?</p>
+
+                <div class="settings-panel-body">
+                    <div class="field">
+                        <label for="gradeLevel" class="field-label">Grade level</label>
+                        <select id="gradeLevel" class="form-select">
+                            <!-- Populated from the curriculum data by FormManager -->
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="difficulty" class="field-label">
+                            Difficulty
+                            <output id="difficultyLabel" class="field-value">Medium</output>
+                        </label>
+                        <input type="range" id="difficulty" class="range-input" min="1" max="3" value="2"
+                               aria-describedby="difficulty-scale">
+                        <div class="range-scale" id="difficulty-scale">
+                            <span>Easy</span><span>Medium</span><span>Hard</span>
                         </div>
                     </div>
                 </div>
+            </section>
 
-                <!-- Subject & Content Configuration -->
-                <div class="form-section card fade-in-up">
-                    <h3 class="form-section-title">
-                        <i class="fas fa-book"></i>
-                        Subject & Content
-                    </h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Subjects</label>
-                            <div id="subjectSelection" class="topic-grid custom-scrollbar">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="subject-all" class="checkbox-input" checked>
-                                    <span class="checkbox-text">All Subjects</span>
-                                </label>
-                            </div>
+            <!-- ---------------------------------------------- 2. Content -->
+            <section class="settings-panel" id="step-content" role="tabpanel" aria-label="Content">
+                <p class="settings-panel-hint">Which mathematics appears on the page</p>
+
+                <div class="settings-panel-body">
+                    <div class="field">
+                        <div class="field-label-row">
+                            <span class="field-label">Subjects</span>
+                            <label class="toggle-all">
+                                <input type="checkbox" id="subject-all" class="checkbox-input" checked>
+                                <span>All</span>
+                            </label>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Topics</label>
-                            <div id="topicSelection" class="topic-grid custom-scrollbar">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="topic-all" class="checkbox-input">
-                                    <span class="checkbox-text">All Topics</span>
-                                </label>
-                            </div>
+                        <div id="subjectSelection" class="chip-grid">
+                            <!-- Populated by FormManager -->
                         </div>
                     </div>
-                    <div class="form-group" id="operationsSection">
-                        <label class="form-label">Operations</label>
-                        <div class="operation-grid">
-                            <label class="checkbox-label">
+
+                    <div class="field" id="operationsSection">
+                        <span class="field-label">Operations</span>
+                        <div class="chip-grid chip-grid-4">
+                            <label class="chip">
                                 <input type="checkbox" id="op-addition" class="checkbox-input" value="addition" checked>
-                                <span class="checkbox-text">Addition</span>
+                                <span class="chip-text"><b>+</b> Addition</span>
                             </label>
-                            <label class="checkbox-label">
+                            <label class="chip">
                                 <input type="checkbox" id="op-subtraction" class="checkbox-input" value="subtraction" checked>
-                                <span class="checkbox-text">Subtraction</span>
+                                <span class="chip-text"><b>&minus;</b> Subtraction</span>
                             </label>
-                            <label class="checkbox-label">
+                            <label class="chip">
                                 <input type="checkbox" id="op-multiplication" class="checkbox-input" value="multiplication" checked>
-                                <span class="checkbox-text">Multiplication</span>
+                                <span class="chip-text"><b>&times;</b> Multiplication</span>
                             </label>
-                            <label class="checkbox-label">
+                            <label class="chip">
                                 <input type="checkbox" id="op-division" class="checkbox-input" value="division" checked>
-                                <span class="checkbox-text">Division</span>
+                                <span class="chip-text"><b>&divide;</b> Division</span>
                             </label>
                         </div>
                     </div>
-                </div>
 
-                <!-- Problem Settings -->
-                <div class="form-section card fade-in-up">
-                    <h3 class="form-section-title">
-                        <i class="fas fa-cog"></i>
-                        Problem Settings
-                    </h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="problemType" class="form-label">Problem Type</label>
+                    <div class="field">
+                        <div class="field-label-row">
+                            <span class="field-label">Topics</span>
+                            <label class="toggle-all">
+                                <input type="checkbox" id="topic-all" class="checkbox-input" checked>
+                                <span>All</span>
+                            </label>
+                        </div>
+                        <p class="field-help">
+                            Only topics the chosen grade covers are listed. Open one to set its
+                            number range and other details.
+                        </p>
+                        <div id="topicSelection" class="topic-list custom-scrollbar">
+                            <!-- Populated by FormManager -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ----------------------------------------------- 3. Format -->
+            <section class="settings-panel" id="step-format" role="tabpanel" aria-label="Format">
+                <p class="settings-panel-hint">How many, and in what shape</p>
+
+                <div class="settings-panel-body">
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="problemType" class="field-label">Problem type</label>
                             <select id="problemType" class="form-select">
-                                <option value="equations" selected>Equations Only</option>
-                                <option value="word">Word Problems Only</option>
-                                <option value="mixed">Mixed (Alternating Pages)</option>
+                                <option value="equations" selected>Equations only</option>
+                                <option value="word">Word problems only</option>
+                                <option value="mixed">Mixed (alternating pages)</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="answerKey" class="form-label">Answer Key</label>
+                        <div class="field">
+                            <label for="answerKey" class="field-label">Answer key</label>
                             <select id="answerKey" class="form-select">
-                                <option value="separate">Separate Page</option>
-                                <option value="none">No Answer Key</option>
+                                <option value="separate">On a separate page</option>
+                                <option value="none">No answer key</option>
                             </select>
                         </div>
                     </div>
+
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="numPDFs" class="field-label">Worksheets</label>
+                            <input type="number" id="numPDFs" class="form-input" value="1" min="1" max="100">
+                            <p class="field-help">Each gets its own problems.</p>
+                        </div>
+                        <div class="field">
+                            <label for="numPages" class="field-label">Pages each</label>
+                            <input type="number" id="numPages" class="form-input" value="1" min="1" max="50">
+                            <p class="field-help">Before the answer key.</p>
+                        </div>
+                    </div>
                 </div>
+            </section>
 
-                <!-- Output Settings -->
-                <div class="form-section card fade-in-up">
-                    <h3 class="form-section-title">
-                        <i class="fas fa-file-pdf"></i>
-                        Output Settings
-                    </h3>
+            <!-- ------------------------------------------- 4. Appearance -->
+            <section class="settings-panel" id="step-appearance" role="tabpanel" aria-label="Appearance">
+                <p class="settings-panel-hint">What the printed page looks like</p>
 
-                    <!-- PDF Generation -->
-                    <div class="form-subsection">
-                        <h4 class="form-subsection-title">PDF Generation</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="numPDFs" class="form-label">Number of PDFs</label>
-                                <input type="number" id="numPDFs" class="form-input" value="5" min="1" max="100">
-                                <small class="form-help">Generate multiple unique worksheets (1-100)</small>
-                            </div>
-                            <div class="form-group">
-                                <label for="numPages" class="form-label">Pages per PDF</label>
-                                <input type="number" id="numPages" class="form-input" value="4" min="1" max="50">
-                                <small class="form-help">Pages in each worksheet (1-50)</small>
-                            </div>
+                <div class="settings-panel-body">
+                    <div class="field">
+                        <label for="pdfTitle" class="field-label">Worksheet title</label>
+                        <input type="text" id="pdfTitle" class="form-input" value="Math Practice" maxlength="80">
+                    </div>
+
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="showTitle" class="field-label">Show title on</label>
+                            <select id="showTitle" class="form-select">
+                                <option value="first">First page only</option>
+                                <option value="all">Every page</option>
+                                <option value="no">No page</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="paperSize" class="field-label">Paper size</label>
+                            <select id="paperSize" class="form-select">
+                                <option value="letter">Letter (8.5 &times; 11 in)</option>
+                                <option value="a4">A4 (210 &times; 297 mm)</option>
+                            </select>
                         </div>
                     </div>
 
-                    <!-- Title & Header -->
-                    <div class="form-subsection form-accordion">
-                        <button type="button" class="form-accordion-toggle" aria-expanded="false">
-                            <h4 class="form-subsection-title">Title & Header <span class="optional-tag">(Optional)</span></h4>
-                            <i class="fas fa-chevron-down accordion-icon"></i>
-                        </button>
-                        <div class="form-accordion-content">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="pdfTitle" class="form-label form-label-required">Worksheet Title</label>
-                                    <input type="text" id="pdfTitle" class="form-input" value="" placeholder="Auto-generated based on grade and subject" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="showTitle" class="form-label">Show Title on PDF</label>
-                                    <select id="showTitle" class="form-select">
-                                        <option value="all">All Pages</option>
-                                        <option value="first" selected>First Page Only</option>
-                                        <option value="no">No</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Header Fields</label>
-                                <div class="checkbox-grid-4">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="showName" class="checkbox-input">
-                                        <span class="checkbox-text">Name</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="showDate" class="checkbox-input">
-                                        <span class="checkbox-text">Date</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="showScore" class="checkbox-input">
-                                        <span class="checkbox-text">Score</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="showGrade" class="checkbox-input">
-                                        <span class="checkbox-text">Grade</span>
-                                    </label>
-                                </div>
-                            </div>
+                    <div class="field">
+                        <span class="field-label">Header fields</span>
+                        <div class="chip-grid chip-grid-4">
+                            <label class="chip">
+                                <input type="checkbox" id="showName" class="checkbox-input">
+                                <span class="chip-text">Name</span>
+                            </label>
+                            <label class="chip">
+                                <input type="checkbox" id="showDate" class="checkbox-input">
+                                <span class="chip-text">Date</span>
+                            </label>
+                            <label class="chip">
+                                <input type="checkbox" id="showScore" class="checkbox-input">
+                                <span class="chip-text">Score</span>
+                            </label>
+                            <label class="chip">
+                                <input type="checkbox" id="showGrade" class="checkbox-input">
+                                <span class="chip-text">Grade</span>
+                            </label>
                         </div>
                     </div>
 
-                    <!-- Page Styling -->
-                    <div class="form-subsection form-accordion">
-                        <button type="button" class="form-accordion-toggle" aria-expanded="false">
-                            <h4 class="form-subsection-title">Page Styling <span class="optional-tag">(Optional)</span></h4>
-                            <i class="fas fa-chevron-down accordion-icon"></i>
-                        </button>
-                        <div class="form-accordion-content">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="paperSize" class="form-label">Paper Size</label>
-                                    <select id="paperSize" class="form-select">
-                                        <option value="letter">Letter (8.5 × 11 in)</option>
-                                        <option value="a4">A4 (210 × 297 mm)</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="pageNumberPosition" class="form-label">Page Number Position</label>
-                                    <select id="pageNumberPosition" class="form-select">
-                                        <option value="bottom-center">Bottom Center</option>
-                                        <option value="bottom-left">Bottom Left</option>
-                                        <option value="bottom-right">Bottom Right</option>
-                                        <option value="top-right">Top Right</option>
-                                        <option value="none">None (Hide)</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Display Options</label>
-                                    <div class="checkbox-group">
-                                        <label class="checkbox-label">
-                                            <input type="checkbox" id="showPageBorder" class="checkbox-input">
-                                            <span class="checkbox-text">Page Border</span>
-                                        </label>
-                                        <label class="checkbox-label">
-                                            <input type="checkbox" id="showPageNumberBox" class="checkbox-input">
-                                            <span class="checkbox-text">Page Number Box</span>
-                                        </label>
-                                        <label class="checkbox-label">
-                                            <input type="checkbox" id="showNumberCircles" class="checkbox-input">
-                                            <span class="checkbox-text">Question Number Circles</span>
-                                        </label>
-                                    </div>
-                                </div>
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="pageNumberPosition" class="field-label">Page numbers</label>
+                            <select id="pageNumberPosition" class="form-select">
+                                <option value="bottom-center">Bottom centre</option>
+                                <option value="bottom-left">Bottom left</option>
+                                <option value="bottom-right">Bottom right</option>
+                                <option value="top-right">Top right</option>
+                                <option value="none">Hidden</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <span class="field-label">Decoration</span>
+                            <div class="switch-list">
+                                <label class="switch-row">
+                                    <span>Page border</span>
+                                    <input type="checkbox" id="showPageBorder" class="checkbox-input">
+                                </label>
+                                <label class="switch-row">
+                                    <span>Box around page number</span>
+                                    <input type="checkbox" id="showPageNumberBox" class="checkbox-input">
+                                </label>
+                                <label class="switch-row">
+                                    <span>Circled question numbers</span>
+                                    <input type="checkbox" id="showNumberCircles" class="checkbox-input">
+                                </label>
                             </div>
                         </div>
                     </div>
                 </div>
+            </section>
 
-                <!-- Action Buttons -->
-                <div class="form-actions fade-in-up">
-                    <button type="button" id="previewBtn" class="btn btn-outline btn-lg">
-                        <i class="fas fa-eye"></i>
-                        Preview
-                    </button>
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-download"></i>
-                        Generate Worksheets
-                    </button>
+            <!-- ---------------------------------------------- 5. History -->
+            <section class="settings-panel" id="step-history" role="tabpanel" aria-label="History" hidden>
+                <p class="settings-panel-hint">Worksheets you have downloaded before</p>
+
+                <div class="settings-panel-body">
+                    <div class="field">
+                        <div class="field-label-row">
+                            <span class="field-label">Recent downloads</span>
+                            <button type="button" id="historyClear" class="quiet-btn">
+                                <i class="fas fa-trash-can"></i>
+                                Clear
+                            </button>
+                        </div>
+                        <p class="field-help">
+                            Each entry keeps the exact settings that produced it. Load one to put
+                            those settings back, then download again. Stored in this browser only.
+                        </p>
+                        <div id="historyList" class="history-list custom-scrollbar">
+                            <!-- Populated by FormManager -->
+                        </div>
+                    </div>
                 </div>
+            </section>
+        </form>
+    </div>
 
-                <p id="engine-status" class="engine-status" role="status">
-                    <i class="fas fa-circle-notch fa-spin"></i>
-                    Loading the LaTeX engine&hellip;
-                </p>
+    <!-- ------------------------------------------------- Preview column -->
+    <aside class="preview-column">
+        <div class="preview-sticky">
+            <div class="preview-actions">
+                <button type="submit" form="pdfForm" class="btn btn-success btn-lg">
+                    <i class="fas fa-download"></i>
+                    Download
+                </button>
+            </div>
 
-            </form>
+            <!-- The preview keeps itself current; this only re-rolls the problems. -->
+            <div class="preview-toolbar">
+                <span class="preview-toolbar-label">Live preview</span>
+                <button type="button" id="previewBtn" class="quiet-btn">
+                    <i class="fas fa-rotate"></i>
+                    Regenerate preview
+                </button>
+            </div>
 
-            <!-- Progress Container -->
             <div id="progress-container" class="progress-container">
                 <div class="progress-bar">
                     <div id="progress-fill" class="progress-fill"></div>
@@ -278,32 +324,23 @@
                 <div id="progress-message" class="progress-message">Initializing...</div>
             </div>
 
-            <!-- Preview Container -->
             <div id="preview-container" class="preview-container">
-                <h3 class="preview-title">
-                    <i class="fas fa-eye"></i>
-                    Worksheet Preview
-                </h3>
-                <div id="preview-content" class="preview-content custom-scrollbar"></div>
+                <div id="preview-content" class="preview-content custom-scrollbar">
+                    <div class="preview-empty">
+                        <i class="fas fa-file-lines"></i>
+                        <p>Your worksheet appears here.</p>
+                        <p class="preview-empty-hint">
+                            Press <strong>Preview</strong> to typeset one, or
+                            <strong>Generate</strong> to download.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
-    </section>
+    </aside>
+</main>
 
-    <!-- GitHub Link (Fixed Position Bottom Left) -->
-    <div class="github-link">
-        <a href="https://github.com/sankeer28/Math-PDF-Generator-Web" class="github-link-btn" target="_blank" rel="noopener noreferrer" title="View on GitHub">
-            <i class="fab fa-github"></i>
-        </a>
-    </div>
-
-    <!-- Theme Toggle Button (Fixed Position) -->
-    <div class="theme-toggle">
-        <button type="button" class="theme-toggle-btn" title="Toggle theme">
-            <i class="fas fa-moon"></i>
-        </button>
-    </div>
-
-    <!-- Application Script (ES6 Module) -->
-    <script type="module" src="js/app.js"></script>
+<!-- Application Script (ES6 Module) -->
+<script type="module" src="js/app.js"></script>
 </body>
 </html>

@@ -31,7 +31,7 @@ and edited further.
 - Grades 1-12, following the **Ontario mathematics curriculum** (2020 for Grades 1-8,
   MTH1W and the senior courses above that)
 - Nine subjects mapped to the Ontario strands: Number, Algebra, Data & Probability,
-  Geometry & Spatial Sense, Measurement, Financial Literacy, Trigonometry,
+  Geometry, Measurement, Financial Literacy, Trigonometry,
   Advanced Functions and Calculus — 90 topics in all
 - Topics are filtered to the grade that teaches them, so a Grade 3 worksheet
   cannot offer integers and a Grade 11 one is not padded with counting

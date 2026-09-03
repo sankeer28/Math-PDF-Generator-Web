@@ -1,211 +1,111 @@
 /* =============================================
    Math-PDF-Generator - Main Stylesheet
-   Professional Design System
    ============================================= */
 
-/* Import all component styles */
 @import './components/variables.css';
 @import './components/reset.css';
 @import './components/typography.css';
 @import './components/layout.css';
-@import './components/navigation.css';
 @import './components/buttons.css';
 @import './components/forms.css';
 @import './components/cards.css';
-@import './components/modals.css';
 @import './components/animations.css';
 @import './components/utilities.css';
 
+/* The workspace shell: app bar, the two panes, panels, chips and preview. */
+@import './components/workspace.css';
+
 /* =============================================
-   Page-specific styles
+   Topic parameters
+
+   Each topic can carry its own settings. They live behind a disclosure so the
+   topic list stays scannable, and only opens for the topic being tuned.
    ============================================= */
 
-.generator-form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xl);
+.topic-parameters {
+    grid-column: 2;
+    justify-self: end;
+    margin: 0;
+    font-size: 0.72rem;
 }
 
-.form-section {
-    padding: var(--spacing-lg);
+.topic-parameters[open] {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    margin: var(--spacing-xs) 0;
 }
 
-.form-section-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: var(--spacing-lg);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    position: relative;
-    z-index: 2;
+.topic-parameters summary {
+    cursor: pointer;
+    color: var(--text-tertiary);
+    padding: 2px 0;
+    list-style: none;
 }
 
-.form-section-title svg,
-.form-section-title i {
-    width: 20px;
-    height: 20px;
+.topic-parameters summary::before {
+    content: '\f013';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    margin-right: 5px;
+    opacity: 0.6;
+}
+
+.topic-parameters summary:hover {
     color: var(--accent-primary);
 }
 
-.form-subsection {
-    margin-bottom: var(--spacing-xl);
-    padding-bottom: var(--spacing-lg);
-    border-bottom: 1px solid var(--border-light);
-}
-
-.form-subsection-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: var(--spacing-md);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 0.8125rem;
-}
-
-.optional-tag {
-    font-size: 0.75rem;
-    font-weight: 400;
-    color: var(--text-tertiary);
-    text-transform: none;
-    letter-spacing: normal;
-    margin-left: var(--spacing-xs);
-}
-
-/* Accordion */
-.form-accordion {
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-md);
-    padding: 0;
-    margin-bottom: var(--spacing-lg);
-}
-
-.form-accordion-toggle {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--spacing-md) var(--spacing-lg);
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-align: left;
-    transition: background-color var(--transition-fast);
-}
-
-.form-accordion-toggle:hover {
-    background-color: var(--bg-secondary);
-}
-
-.form-accordion-toggle .form-subsection-title {
-    margin: 0;
-}
-
-.accordion-icon {
-    color: var(--text-tertiary);
-    transition: transform var(--transition-fast);
-    font-size: 0.875rem;
-}
-
-.form-accordion-toggle[aria-expanded="true"] .accordion-icon {
-    transform: rotate(180deg);
-}
-
-.form-accordion-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
-    padding: 0 var(--spacing-lg);
-}
-
-.form-accordion-content.expanded {
-    max-height: 1000px;
-    padding: 0 var(--spacing-lg) var(--spacing-lg) var(--spacing-lg);
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: var(--spacing-lg);
-    position: relative;
-    z-index: 2;
-}
-
-/* Topic selection grid */
-.topic-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: var(--spacing-sm);
-    max-height: 400px;
-    overflow-y: auto;
-    padding: var(--spacing-sm);
+.topic-parameters[open] {
+    padding: var(--spacing-sm) var(--spacing-md);
     background-color: var(--bg-primary);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-md);
 }
 
-/* Topic subject headers within the grid */
-.topic-subject-header {
-    grid-column: 1 / -1;
+.topic-parameters[open] summary {
+    margin-bottom: var(--spacing-xs);
+    color: var(--text-secondary);
     font-weight: 600;
-    color: var(--accent-primary);
-    margin-top: 8px;
-    font-size: 0.875rem;
-    padding-top: 8px;
-    border-top: 1px solid var(--border-light);
 }
 
-.topic-subject-header:first-of-type {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-}
-
-/* Operation checkboxes */
-.operation-grid {
+.topic-parameter {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: 1fr auto;
+    align-items: center;
     gap: var(--spacing-sm);
+    padding: 3px 0;
 }
 
-/* Form actions */
-.form-actions {
-    display: flex;
-    gap: var(--spacing-md);
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: var(--spacing-lg);
-    position: relative;
-    z-index: 2;
+.topic-parameter label {
+    color: var(--text-secondary);
+    cursor: help;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-
-    .form-actions {
-        flex-direction: column;
-    }
-
-    .topic-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .operation-grid {
-        grid-template-columns: 1fr;
-    }
+/* The field styling is for the text-like controls only; a checkbox here uses
+   the same .checkbox-input look as every other checkbox on the page. */
+.topic-parameter-input:not([type="checkbox"]) {
+    width: 8.5rem;
+    padding: 3px 6px;
+    font-size: 0.75rem;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
 }
 
-/* Alert messages */
+.topic-parameter-input[type="checkbox"] {
+    justify-self: end;
+}
+
+/* =============================================
+   Alerts
+   ============================================= */
+
 .alert {
     padding: var(--spacing-md);
     border-radius: var(--radius-md);
     margin-bottom: var(--spacing-md);
     border: 1px solid transparent;
+    font-size: 0.875rem;
 }
 
 .alert-info {
@@ -230,74 +130,4 @@
     background-color: var(--error-light);
     color: var(--error);
     border-color: var(--error);
-}
-
-/* Engine status: the LaTeX engine loads in the background on first visit */
-.engine-status {
-    margin-top: var(--spacing-md);
-    text-align: center;
-    font-size: 0.8125rem;
-    color: var(--text-tertiary);
-}
-
-.engine-status-ready {
-    color: var(--success, var(--text-tertiary));
-}
-
-.engine-status-error {
-    color: var(--error, var(--text-tertiary));
-}
-
-/* Topic rows: a checkbox, plus a disclosure of that topic's own settings */
-.topic-row {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.topic-parameters {
-    margin-left: 1.75rem;
-    font-size: 0.78rem;
-}
-
-.topic-parameters summary {
-    cursor: pointer;
-    color: var(--text-tertiary);
-    padding: 2px 0;
-}
-
-.topic-parameters summary:hover {
-    color: var(--accent-primary);
-}
-
-.topic-parameters[open] summary {
-    margin-bottom: var(--spacing-xs);
-}
-
-.topic-parameter {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: var(--spacing-sm);
-    padding: 2px 0;
-}
-
-.topic-parameter label {
-    color: var(--text-secondary);
-    cursor: help;
-}
-
-.topic-parameter-input {
-    width: 8.5rem;
-    padding: 2px 6px;
-    font-size: 0.78rem;
-    color: var(--text-primary);
-    background-color: var(--bg-primary);
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-sm, 4px);
-}
-
-.topic-parameter-input[type="checkbox"] {
-    width: auto;
-    justify-self: end;
 }

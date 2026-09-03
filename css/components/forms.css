@@ -92,24 +92,76 @@
     background-color: var(--bg-secondary);
 }
 
+/* Drawn from the design tokens rather than left to the browser, so the boxes
+   match the borders and radii of everything around them, in both themes. */
 .checkbox-input {
-    width: 20px;
-    height: 20px;
+    appearance: none;
+    -webkit-appearance: none;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
     margin: 0;
+    border: 1.5px solid var(--border-medium);
+    border-radius: 4px;
+    background-color: var(--bg-primary);
     cursor: pointer;
+    display: inline-grid;
+    place-content: center;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
-.checkbox-custom {
-    display: none;
+/* The tick is drawn, so it inherits the accent and needs no icon font. */
+.checkbox-input::after {
+    content: '';
+    width: 9px;
+    height: 5px;
+    border: 2px solid #fff;
+    border-top: 0;
+    border-right: 0;
+    border-radius: 1px;
+    transform: rotate(-45deg) translate(1px, -1px) scale(0.6);
+    opacity: 0;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 
-.checkbox-input:checked {
-    accent-color: var(--accent-primary);
+.checkbox-input:hover:not(:disabled) {
+    border-color: var(--accent-primary);
+}
+
+.checkbox-input:checked,
+.checkbox-input:indeterminate {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.checkbox-input:checked::after {
+    opacity: 1;
+    transform: rotate(-45deg) translate(1px, -1px) scale(1);
+}
+
+/* A partial selection reads as a dash, not a tick. */
+.checkbox-input:indeterminate::after {
+    width: 8px;
+    height: 0;
+    border-bottom-width: 2px;
+    border-radius: 2px;
+    transform: none;
+    opacity: 1;
+}
+
+.checkbox-input:disabled {
+    opacity: 0.45;
+    cursor: default;
 }
 
 .checkbox-input:focus-visible {
     outline: 2px solid var(--accent-primary);
     outline-offset: 2px;
+}
+
+[data-theme="dark"] .checkbox-input:checked::after,
+[data-theme="dark"] .checkbox-input:indeterminate::after {
+    border-color: #0d1b2a;
 }
 
 .checkbox-text {

@@ -1,5 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#2563eb"/>
-  <text x="32" y="45" font-family="Georgia, 'Times New Roman', serif" font-size="38"
-        font-style="italic" fill="#ffffff" text-anchor="middle">&#8721;</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Math PDF Generator">
+  <!--
+    A sigma, drawn as a stroked path rather than as <text>: a glyph's position
+    depends on font metrics, so it cannot be centred reliably and disappears on
+    machines without that font. The extremes here are x 16-48 and y 12-52, so
+    the mark is centred on (32, 32) by construction.
+
+    The blue is chosen to hold up on both a light and a dark background, since
+    the same file serves the browser tab and the app bar.
+  -->
+  <path d="M48 12 H16 L34 32 L16 52 H48"
+        fill="none" stroke="#3b82f6" stroke-width="7"
+        stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

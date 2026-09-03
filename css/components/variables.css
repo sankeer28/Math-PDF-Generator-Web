@@ -21,7 +21,8 @@
     --accent-hover: #2c5282;
     --accent-light: #4299e1;
 
-    --success: #28a745;
+    --success: #1e9e4a;
+    --success-hover: #17803b;
     --success-light: #d4edda;
     --warning: #ffc107;
     --warning-light: #fff3cd;
@@ -51,6 +52,13 @@
     --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-mono: 'Courier New', Courier, monospace;
 
+    /* Floating surfaces: translucent, so what scrolls beneath shows through. */
+    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.75);
+    --glass-shine: rgba(255, 255, 255, 0.9);
+    --glass-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 2px 6px -2px rgba(16, 24, 40, 0.08);
+    --glass-shadow-raised: 0 1px 2px rgba(16, 24, 40, 0.07), 0 6px 14px -6px rgba(16, 24, 40, 0.16);
+
     --transition-fast: 150ms ease;
     --transition-base: 250ms ease;
     --transition-slow: 350ms ease;
@@ -71,11 +79,14 @@
     --border-medium: #4a4a4a;
     --border-dark: #5a5a5a;
 
-    --accent-primary: #a0aec0;
-    --accent-hover: #cbd5e0;
-    --accent-light: #718096;
+    /* A real accent in dark mode too: the previous grey made primary buttons,
+       step markers and links read as disabled. */
+    --accent-primary: #4c9aff;
+    --accent-hover: #75b1ff;
+    --accent-light: #2b6cb0;
 
-    --success: #48bb78;
+    --success: #3fbf74;
+    --success-hover: #34a563;
     --success-light: #2d3748;
     --warning: #ecc94b;
     --warning-light: #2d3748;
@@ -83,6 +94,12 @@
     --error-light: #2d3748;
     --info: #4299e1;
     --info-light: #2d3748;
+
+    --glass-bg: rgba(30, 31, 34, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shine: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 6px -2px rgba(0, 0, 0, 0.45);
+    --glass-shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.45), 0 6px 14px -6px rgba(0, 0, 0, 0.6);
 
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);

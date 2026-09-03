@@ -95,3 +95,23 @@ test('defaults are produced for every topic', () => {
         assert.ok(Object.keys(values).length > 0, `${subjectId}/${topicId}`);
     }
 });
+
+test('every numeric default is a value its own control accepts', () => {
+    // A number input whose value is off the step grid, or outside min/max, is
+    // :invalid. That blocks form submission, and when the control sits in a
+    // hidden tab panel the browser cannot even focus it to say why - the
+    // download just fails with a console warning.
+    for (const [subjectId, topicId, topic] of everyTopic) {
+        for (const parameter of parametersForTopic(topic)) {
+            if (parameter.type !== 'number') continue;
+            const where = `${subjectId}/${topicId}.${parameter.id}`;
+
+            assert.ok(parameter.default >= parameter.min, `${where} default below min`);
+            assert.ok(parameter.default <= parameter.max, `${where} default above max`);
+            assert.equal(
+                (parameter.default - parameter.min) % parameter.step, 0,
+                `${where} default ${parameter.default} is off its step grid (min ${parameter.min}, step ${parameter.step})`
+            );
+        }
+    }
+});

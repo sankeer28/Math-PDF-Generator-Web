@@ -26,8 +26,31 @@
 /* Primary button */
 .btn-primary {
     background-color: var(--accent-primary);
-    color: var(--bg-primary);
+    /* Fixed, not var(--bg-primary): in dark mode that is near-black on blue. */
+    color: #ffffff;
     border-color: var(--accent-primary);
+}
+
+[data-theme="dark"] .btn-primary {
+    color: #0d1b2a;
+}
+
+/* Download: the one action that produces a file, so it reads as a completion
+   rather than as another blue control among many. */
+.btn-success {
+    background-color: var(--success);
+    color: #ffffff;
+    border-color: var(--success);
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: var(--success-hover);
+    border-color: var(--success-hover);
+    box-shadow: var(--shadow-md);
+}
+
+[data-theme="dark"] .btn-success {
+    color: #04220f;
 }
 
 .btn-primary:hover:not(:disabled) {
