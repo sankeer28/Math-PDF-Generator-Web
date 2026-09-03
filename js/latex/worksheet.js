@@ -14,7 +14,34 @@ import { escapeText, formatExpression, formatAnswer } from './escape.js';
 export const PROBLEMS_PER_PAGE = {
     equations: 20,
     word: 4,
+    // A starting point only: diagram pages are packed by figure height instead,
+    // through visualPageCapacity().
+    visual: 6,
 };
+
+/** Question text plus the answer rule that sits under every figure. */
+const VISUAL_CHROME_MM = 19;
+
+/** Diagram pages run in two columns. */
+const VISUAL_COLUMNS = 2;
+
+/**
+ * How many diagrams fit on one page.
+ *
+ * Figures range from a 10 mm fraction bar to a 36 mm budget circle, so any fixed
+ * count either leaves half the page empty or overflows it. The caller measures
+ * the figures it intends to draw and asks for a count that suits them.
+ *
+ * @param {object} options - form options
+ * @param {number} pageIndex - later pages may have no title, freeing space
+ * @param {number} [averageFigureMm] - mean drawn height of the figures expected
+ * @returns {number} a count a page can actually hold
+ */
+export function visualPageCapacity(options, pageIndex, averageFigureMm = 24) {
+    const free = usableHeightMm(options) - headerHeightMm(options, pageIndex);
+    const perItem = Math.max(14, averageFigureMm + VISUAL_CHROME_MM);
+    return Math.max(2, Math.min(Math.floor(free / perItem) * VISUAL_COLUMNS, 24));
+}
 
 const PAPER_SIZES = {
     letter: 'letterpaper',
@@ -57,9 +84,7 @@ export function buildWorksheet(options, pages) {
         const header = renderHeader(options, index);
         const free = usableHeightMm(options) - headerHeightMm(options, index);
         body.push(header);
-        body.push(page.type === 'word'
-            ? renderWordProblems(page.problems, free)
-            : renderEquations(page.problems, free));
+        body.push(renderPage(page, free));
 
         for (const problem of page.problems) answers.push(problem.answer);
     });
@@ -83,6 +108,7 @@ function preamble(options) {
         '\\usepackage{amsmath}',
         '\\usepackage{amssymb}',
         '\\usepackage{multicol}',
+        '\\usepackage{tikz}',
         '\\usepackage{fancyhdr}',
         '\\usepackage{lastpage}',
         '',
@@ -122,6 +148,11 @@ function preamble(options) {
         '\\newcommand{\\wsanswerlines}{%',
         '  \\par\\vspace{2mm}\\textbf{\\footnotesize Answer:}~\\wsrule',
         '  \\par\\vspace{6mm}\\wsrule\\par\\vspace{1mm}}',
+        '\\newcommand{\\wsvisualanswer}{%',
+        '  \\par\\vspace{1mm}\\textbf{\\footnotesize Answer:}~\\wsrule\\par}',
+        '% A figure is centred under its question and stays with it.',
+        '\\newcommand{\\wsfigure}[1]{%',
+        '  \\par\\vspace{2mm}\\noindent\\hspace*{\\fill}#1\\hspace*{\\fill}\\par\\vspace{1mm}}',
     ];
 
     lines.push(renderPageNumberStyle(options));
@@ -191,6 +222,13 @@ function renderHeader(options, pageIndex) {
     return lines.join('\n');
 }
 
+/** Routes a page to the layout its problem type needs. */
+function renderPage(page, freeHeightMm) {
+    if (page.type === 'word') return renderWordProblems(page.problems, freeHeightMm);
+    if (page.type === 'visual') return renderVisualProblems(page.problems, freeHeightMm);
+    return renderEquations(page.problems, freeHeightMm);
+}
+
 /* Rough heights, in millimetres, used only to spread problems down the page.
    Getting these slightly wrong shifts the whitespace; it cannot break the page,
    because the gap is clamped well inside what a page can hold. */
@@ -242,6 +280,31 @@ function renderWordProblems(problems, freeHeightMm) {
     return [
         `\\setlength{\\wsgap}{${spread(freeHeightMm, problems.length, WORD_ITEM_MM, 6, 30)}mm}`,
         items.join('\n\n'),
+    ].join('\n');
+}
+
+/**
+ * A page of diagram questions: two columns, each question carrying its figure
+ * and a single answer rule.
+ *
+ * The figure is raw TikZ from the visual templates, so unlike the question text
+ * it is inserted without escaping.
+ */
+function renderVisualProblems(problems, freeHeightMm) {
+    const items = problems.map((problem) => {
+        const figure = problem.figure ? `\\wsfigure{${problem.figure}}` : '';
+        return `\\wsproblem{${escapeText(problem.question)}${figure}\\wsvisualanswer}`;
+    });
+
+    // The gap follows the figures actually on this page, not an assumed size.
+    const averageFigure = problems.reduce((sum, p) => sum + (p.heightMm || 24), 0) / (problems.length || 1);
+    const rows = Math.ceil(problems.length / VISUAL_COLUMNS);
+
+    return [
+        `\\setlength{\\wsgap}{${spread(freeHeightMm, rows, averageFigure + VISUAL_CHROME_MM, 2, 14)}mm}`,
+        `\\begin{multicols}{${VISUAL_COLUMNS}}`,
+        items.join('\n\n'),
+        `\\end{multicols}`,
     ].join('\n');
 }
 

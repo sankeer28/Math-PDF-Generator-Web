@@ -9,11 +9,33 @@ import { GRADE_CONFIGS, DIFFICULTY_MULTIPLIERS, CONTEXTUAL_DATA } from './consta
 import { WORD_PROBLEM_TEMPLATES } from '../curriculum/templates/wordProblems.js';
 import { GRADE_EQUATIONS, GRADE_WORD_PROBLEMS } from '../curriculum/templates/gradeProblems.js';
 import { FINANCIAL_PROBLEMS } from '../curriculum/templates/financialProblems.js';
+import { VISUAL_PROBLEMS } from '../curriculum/templates/visualProblems.js';
 import { SUBJECT_TOPICS, defaultParameterValues, parametersForTopic, coerceParameter } from '../curriculum/index.js';
+
+/**
+ * The string a problem is deduplicated on.
+ *
+ * Text problems are their wording. A problem carrying a figure is its wording
+ * plus that figure, since the drawing is what actually differs.
+ */
+function fingerprint(problem) {
+    const question = String(problem.question || '').trim().toLowerCase();
+    return problem.figure ? `${question}|${problem.figure}` : question;
+}
+
+/** Finds a topic by id across every subject, for grade checks. */
+function findTopic(topicId) {
+    for (const subject of Object.values(SUBJECT_TOPICS)) {
+        if (subject.topics[topicId]) return subject.topics[topicId];
+    }
+    return null;
+}
 
 export class ProblemGenerator {
     constructor() {
         this.usedProblems = new Set();
+        // Figure kinds already used, so a page cycles through them before repeating.
+        this.usedVisualDraws = new Set();
         this.usedCombinations = new Map();
         this.contextHistory = new Map();
         this.numberHistory = new Map();
@@ -47,6 +69,9 @@ export class ProblemGenerator {
         this.config = {
             grade: GRADE_CONFIGS[gradeLevel],
             difficulty: difficultyValue,
+            // The name as well as the multiplier: figures scale by band, not
+            // by a float, and "hard" has to mean something specific to them.
+            difficultyName: difficulty,
             subjects: subjects,  // Store array of subjects
             maxNumber: Math.floor(GRADE_CONFIGS[gradeLevel].maxNumber * difficultyValue)
         };
@@ -93,6 +118,11 @@ export class ProblemGenerator {
         return {
             maxNumber: this.config?.maxNumber ?? 100,
             ...(this.topicParameters?.[topicId] || {}),
+            // Grade and difficulty travel with the parameters so a template can
+            // scale itself: the same fraction bar is halves in Grade 2 and
+            // sixteenths-as-a-percent in Grade 8.
+            grade: Number(String(this.config?.grade?.id || '').replace('grade', '')) || 6,
+            difficulty: this.config?.difficultyName || 'medium',
         };
     }
 
@@ -123,7 +153,11 @@ export class ProblemGenerator {
         }
 
         if (problemType === 'mixed') {
-            problemType = Math.random() < 0.5 ? 'equations' : 'word';
+            problemType = randomChoice(['equations', 'word', 'visual']);
+        }
+
+        if (problemType === 'visual') {
+            return this.generateVisualProblem(selectedTopics);
         }
 
         operation = this.validateOperationForSubject(operation, subject);
@@ -3013,6 +3047,78 @@ export class ProblemGenerator {
     }
 
     /**
+     * Draws a diagram question: a number line to read, a shaded fraction bar, a
+     * labelled shape. The returned problem carries a `figure` of raw TikZ
+     * alongside its question and answer.
+     *
+     * Only topics this grade teaches are offered, so a Grade 2 sheet cannot ask
+     * for the Pythagorean theorem. If the chosen topics have no visual form,
+     * every visual this grade can take is used instead.
+     *
+     * @param {string[]|'all'} [selectedTopics]
+     * @returns {{question: string, answer: string|number, figure: string}}
+     */
+    generateVisualProblem(selectedTopics = 'all') {
+        const gradeId = this.config?.grade?.id;
+
+        const forGrade = Object.keys(VISUAL_PROBLEMS).filter((topicId) => {
+            const topic = findTopic(topicId);
+            return !topic || !gradeId || topic.grades.includes(gradeId);
+        });
+
+        const chosen = selectedTopics === 'all' || !selectedTopics?.length
+            ? forGrade
+            : forGrade.filter((topicId) => selectedTopics.includes(topicId));
+
+        const pool = chosen.length ? chosen : (forGrade.length ? forGrade : Object.keys(VISUAL_PROBLEMS));
+
+        // Balance by figure kind, not by topic: four data topics all draw a bar
+        // graph, so picking a topic first would fill a page with bar graphs.
+        const gradeNumber = Number(String(gradeId || '').replace('grade', '')) || 6;
+        const suitsGrade = (draw) => {
+            const [first, last] = draw.grades || [1, 12];
+            return gradeNumber >= first && gradeNumber <= last;
+        };
+
+        const byDraw = new Map();
+        for (const topicId of pool) {
+            for (const draw of VISUAL_PROBLEMS[topicId]) {
+                // The figure carries its own grade band: a topic may run to
+                // Grade 12 while the picture that illustrates it stops at 8.
+                if (!suitsGrade(draw) || byDraw.has(draw)) continue;
+                byDraw.set(draw, topicId);
+            }
+        }
+
+        // Nothing this grade can draw from the chosen topics: widen to any
+        // figure the grade can take rather than draw something inappropriate.
+        if (byDraw.size === 0) {
+            for (const [topicId, draws] of Object.entries(VISUAL_PROBLEMS)) {
+                for (const draw of draws) {
+                    if (suitsGrade(draw) && !byDraw.has(draw)) byDraw.set(draw, topicId);
+                }
+            }
+        }
+        if (byDraw.size === 0) return this.generateEquation('mixed', selectedTopics, 'arithmetic');
+
+        // Work through the available figure kinds before repeating any. Drawing
+        // at random put two "growth or decay?" exponentials side by side; the
+        // pictures differed but the question read as a duplicate.
+        let candidates = [...byDraw.keys()].filter((draw) => !this.usedVisualDraws.has(draw));
+        if (candidates.length === 0) {
+            this.usedVisualDraws.clear();
+            candidates = [...byDraw.keys()];
+        }
+
+        const draw = randomChoice(candidates);
+        this.usedVisualDraws.add(draw);
+
+        // The height hint travels with the problem so the page can be packed by
+        // how tall its figures actually are.
+        return { ...draw(this.paramsFor(byDraw.get(draw))), heightMm: draw.heightMm || 24 };
+    }
+
+    /**
      * Draws a financial literacy problem, honouring the topics the user chose
      * and the parameters set on whichever topic is drawn.
      *
@@ -3673,8 +3779,10 @@ export class ProblemGenerator {
         do {
             problem = this.generateProblem(operation, problemType, selectedTopics);
 
-            // Normalize the question for better duplicate detection
-            const normalizedQuestion = problem.question.trim().toLowerCase();
+            // What makes two problems the same. A diagram question is defined by
+            // its picture as much as its words: six spinners all ask "what is the
+            // probability?", and comparing wording alone would reject five of them.
+            const normalizedQuestion = fingerprint(problem);
 
             // First check for exact duplicates
             if (this.usedProblems.has(normalizedQuestion)) {
@@ -3683,12 +3791,17 @@ export class ProblemGenerator {
                 continue;
             }
 
-            // Then check for similarity
+            // Fuzzy similarity is for prose. Two drawings that differ only in
+            // their coordinates share almost every character, so comparing them
+            // this way would reject perfectly distinct figures; an exact match on
+            // the figure is the right test, and it has already passed above.
             isUnique = true;
-            for (let existingProblem of this.usedProblems) {
-                if (this.checkSimilarity(normalizedQuestion, existingProblem) > this.uniquenessThreshold) {
-                    isUnique = false;
-                    break;
+            if (!problem.figure) {
+                for (let existingProblem of this.usedProblems) {
+                    if (this.checkSimilarity(normalizedQuestion, existingProblem) > this.uniquenessThreshold) {
+                        isUnique = false;
+                        break;
+                    }
                 }
             }
 
@@ -3696,8 +3809,7 @@ export class ProblemGenerator {
         } while (!isUnique && attempts < maxAttempts);
 
         if (isUnique) {
-            // Store normalized version to catch exact duplicates faster
-            this.usedProblems.add(problem.question.trim().toLowerCase());
+            this.usedProblems.add(fingerprint(problem));
         } else {
             // If we couldn't find a unique problem after max attempts, log a warning
             console.warn(`Could not generate unique problem after ${maxAttempts} attempts. Question: ${problem.question}`);
@@ -3707,6 +3819,7 @@ export class ProblemGenerator {
     }
 
     clearUsedProblems() {
+        this.usedVisualDraws.clear();
         this.usedProblems.clear();
         this.usedCombinations.clear();
         this.contextHistory.clear();

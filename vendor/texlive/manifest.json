@@ -1,5 +1,5 @@
 {
-  "built": "2026-09-02",
+  "built": "2026-09-03",
   "source": "TeX Live via CTAN (mirror.ctan.org/systems/texlive/tlnet)",
   "packages": [
     "tex-ini-files",
@@ -22,10 +22,22 @@
     "iftex",
     "fancyhdr",
     "lastpage",
+    "pgf",
+    "xcolor",
+    "epstopdf-pkg",
+    "kvoptions",
+    "infwarerr",
+    "ltxcmds",
+    "pdftexcmds",
+    "grfext",
+    "kvsetkeys",
+    "etexcmds",
+    "kvdefinekeys",
+    "pdfescape",
     "cm",
     "latex-fonts"
   ],
-  "files": 367,
-  "bytes": 16872492,
-  "compressedBytes": 6005057
+  "files": 439,
+  "bytes": 18227332,
+  "compressedBytes": 6286245
 }

@@ -436,10 +436,11 @@ export class FormManager {
         problemTypeSelect.innerHTML = '';
 
         const typeLabels = {
-            equations: 'Equations Only',
-            word: 'Word Problems Only',
-            mixed: 'Mixed (Alternating Pages)',
-            story: 'Story Problems'
+            equations: 'Equations only',
+            word: 'Word problems only',
+            visual: 'Diagrams only',
+            mixed: 'Mixed (alternating pages)',
+            story: 'Story problems'
         };
 
         availableTypes.forEach(type => {

@@ -24,7 +24,7 @@ export const grade3 = {
     complexityMultiplier: 0.6,
 
     // Available problem types
-    problemTypes: ['equations', 'word', 'mixed'],
+    problemTypes: ['equations', 'word', 'visual', 'mixed'],
 
     // Recommended defaults
     defaults: {

@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 
 import { NodePdfTeX } from './lib/node-engine.mjs';
 import { buildWorksheet } from '../js/latex/worksheet.js';
+import { VISUAL_PROBLEMS } from '../js/curriculum/templates/visualProblems.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = path.join(ROOT, '.cache', 'texlive');
@@ -40,6 +41,9 @@ const PACKAGES = [
     // document packages
     'amsmath', 'amsfonts', 'geometry', 'graphics', 'graphics-def', 'graphics-cfg',
     'tools', 'iftex', 'fancyhdr', 'lastpage',
+    // diagrams: TikZ, plus the support packages pgf loads
+    'pgf', 'xcolor', 'epstopdf-pkg', 'kvoptions', 'infwarerr', 'ltxcmds',
+    'pdftexcmds', 'grfext', 'kvsetkeys', 'etexcmds', 'kvdefinekeys', 'pdfescape',
     // fonts
     'cm', 'latex-fonts',
 ];
@@ -214,6 +218,16 @@ function probeDocuments() {
         'If 35% of a class of 40 students play piano, how many students is that?',
     ];
 
+    // Every figure kind the app can draw, so the probe pulls in every TikZ
+    // library those figures need.
+    const visuals = [
+        'counting-quantity', 'fractions', 'area-perimeter', 'pythagorean-theorem',
+        'angles', 'bar-graphs', 'time', 'coordinate-geometry', 'basic-operations',
+    ].flatMap((topicId) => VISUAL_PROBLEMS[topicId].map((draw) => {
+        const drawn = draw({ maxNumber: 20, maxDenominator: 12 });
+        return { question: drawn.question, answer: drawn.answer, figure: drawn.figure, type: 'visual' };
+    }));
+
     const toProblems = (questions, type) => questions.map((question, index) => ({
         question,
         answer: type === 'word' ? `${index + 1} units` : `${index + 1}/${index + 2}`,
@@ -238,6 +252,7 @@ function probeDocuments() {
     const pages = [
         { type: 'equations', problems: toProblems(equations, 'equations') },
         { type: 'word', problems: toProblems(words, 'word') },
+        { type: 'visual', problems: visuals },
     ];
 
     return {

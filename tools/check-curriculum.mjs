@@ -76,6 +76,7 @@ for (const [grade, config] of Object.entries(GRADE_CONFIGS)) {
                 const source = buildWorksheet(OPTIONS, [
                     buildPage(generator, 'equations', 'all'),
                     buildPage(generator, 'word', 'all'),
+                    buildPage(generator, 'visual', 'all'),
                 ]);
 
                 const result = await engine.compile(source, 1);

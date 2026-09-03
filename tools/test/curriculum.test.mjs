@@ -115,3 +115,75 @@ test('every numeric default is a value its own control accepts', () => {
         }
     }
 });
+
+test('every visual template produces a question, an answer and a figure', async () => {
+    const { VISUAL_PROBLEMS } = await import('../../js/curriculum/templates/visualProblems.js');
+    const parameters = { maxNumber: 20, maxDenominator: 12 };
+
+    for (const [topicId, draws] of Object.entries(VISUAL_PROBLEMS)) {
+        assert.ok(findTopicById(topicId), `visual topic "${topicId}" is not a real topic`);
+
+        for (const draw of draws) {
+            // Figures are random, so draw each one repeatedly: a bad rounding or
+            // an empty range would otherwise only show up for some seeds.
+            for (let attempt = 0; attempt < 25; attempt += 1) {
+                const problem = draw(parameters);
+                assert.ok(problem.question?.length > 0, topicId);
+                assert.ok(String(problem.answer).length > 0, topicId);
+                assert.match(problem.figure, /^\\begin\{tikzpicture\}/, topicId);
+                assert.match(problem.figure, /\\end\{tikzpicture\}$/, topicId);
+                assert.ok(!problem.figure.includes('NaN'), `${topicId} produced NaN in its figure`);
+                assert.ok(!problem.figure.includes('undefined'), `${topicId} produced undefined`);
+            }
+        }
+    }
+});
+
+/** Visual templates are keyed by topic id, so those ids have to exist. */
+function findTopicById(topicId) {
+    return Object.values(SUBJECT_TOPICS).some((subject) => subject.topics[topicId]);
+}
+
+test('every visual template declares a grade band and a height', async () => {
+    const { VISUAL_PROBLEMS } = await import('../../js/curriculum/templates/visualProblems.js');
+    for (const draw of new Set(Object.values(VISUAL_PROBLEMS).flat())) {
+        assert.ok(Array.isArray(draw.grades), `${draw.name} has no grade band`);
+        const [first, last] = draw.grades;
+        assert.ok(first >= 1 && last <= 12 && first <= last, `${draw.name} band ${first}-${last} is not sane`);
+        assert.ok(draw.heightMm > 0, `${draw.name} has no height`);
+    }
+});
+
+test('a grade is never offered a figure from outside its band', async () => {
+    const { ProblemGenerator } = await import('../../js/modules/problemGenerator.js');
+    const { VISUAL_PROBLEMS } = await import('../../js/curriculum/templates/visualProblems.js');
+
+    // Which question wordings each figure can produce, so a drawn problem can be
+    // traced back to the figure that made it.
+    const owner = new Map();
+    for (const draw of new Set(Object.values(VISUAL_PROBLEMS).flat())) {
+        for (let i = 0; i < 40; i += 1) {
+            for (const grade of [2, 6, 11]) {
+                const problem = draw({ grade, difficulty: 'medium', maxNumber: 20, maxDenominator: 12 });
+                if (!owner.has(problem.question)) owner.set(problem.question, draw);
+            }
+        }
+    }
+
+    for (const gradeId of ['grade1', 'grade2', 'grade5', 'grade8', 'grade11', 'grade12']) {
+        const grade = Number(gradeId.replace('grade', ''));
+        const generator = new ProblemGenerator();
+        generator.setConfig(gradeId, 'medium', Object.keys(SUBJECT_TOPICS));
+
+        for (let i = 0; i < 150; i += 1) {
+            const problem = generator.generateVisualProblem();
+            const draw = owner.get(problem.question);
+            if (!draw) continue;
+            const [first, last] = draw.grades;
+            assert.ok(
+                grade >= first && grade <= last,
+                `${gradeId} was offered ${draw.name}, which is for grades ${first}-${last}`
+            );
+        }
+    }
+});

@@ -106,3 +106,43 @@ test('word problems get answer lines', () => {
     const source = buildWorksheet(BASE, [page('word', PROBLEMS_PER_PAGE.word)]);
     assert.equal(source.match(/\\wsanswerlines/g).length, PROBLEMS_PER_PAGE.word + 1); // +1 definition
 });
+
+test('a visual page carries each problem figure into the document', () => {
+    const figures = {
+        type: 'visual',
+        problems: Array.from({ length: PROBLEMS_PER_PAGE.visual }, (_, index) => ({
+            question: `Question ${index + 1}?`,
+            answer: `${index}`,
+            figure: `\\begin{tikzpicture}\\draw (0,0) -- (${index + 1},0);\\end{tikzpicture}`,
+            type: 'visual',
+        })),
+    };
+
+    const source = buildWorksheet(BASE, [figures]);
+    assert.ok(source.includes('\\usepackage{tikz}'), 'loads tikz');
+    assert.equal((source.match(/\\begin\{tikzpicture\}/g) || []).length, PROBLEMS_PER_PAGE.visual);
+    assert.equal((source.match(/\\wsfigure\{/g) || []).length, PROBLEMS_PER_PAGE.visual);
+});
+
+test('figures are inserted raw, while the question around them is escaped', () => {
+    const source = buildWorksheet(BASE, [{
+        type: 'visual',
+        problems: [{
+            question: '50% shaded?',
+            answer: '1/2',
+            figure: '\\begin{tikzpicture}\\draw (0,0) circle (1);\\end{tikzpicture}',
+            type: 'visual',
+        }],
+    }]);
+    assert.ok(source.includes('50\\% shaded?'), 'question text is escaped');
+    assert.ok(source.includes('\\draw (0,0) circle (1);'), 'figure is left untouched');
+});
+
+test('a problem without a figure still renders on a visual page', () => {
+    const source = buildWorksheet(BASE, [{
+        type: 'visual',
+        problems: [{ question: 'No picture here', answer: '1', type: 'visual' }],
+    }]);
+    assert.ok(source.includes('No picture here'));
+    assert.ok(!source.includes('\\wsfigure{}'), 'no empty figure box');
+});

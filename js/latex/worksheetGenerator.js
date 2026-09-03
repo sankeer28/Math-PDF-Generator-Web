@@ -9,7 +9,7 @@
 
 import { ProblemGenerator } from '../modules/problemGenerator.js';
 import { LatexEngine, LatexError } from './engine.js';
-import { buildWorksheet, PROBLEMS_PER_PAGE } from './worksheet.js';
+import { buildWorksheet, PROBLEMS_PER_PAGE, visualPageCapacity } from './worksheet.js';
 
 /** One shared engine: loading the TeX bundle is the expensive part. */
 const engine = new LatexEngine();
@@ -91,17 +91,27 @@ export class WorksheetGenerator {
 
         for (let index = 0; index < pageCount; index += 1) {
             const type = pageTypeFor(options.problemType, index);
-            const count = PROBLEMS_PER_PAGE[type];
             const problems = [];
+
+            // A diagram page holds however many its figures allow. Draw a couple
+            // first to see how tall they run, then size the page to them.
+            let count = PROBLEMS_PER_PAGE[type];
+            if (type === 'visual') {
+                const sample = Array.from({ length: 3 }, () => this.problemGenerator.generateVisualProblem(options.topics));
+                const average = sample.reduce((sum, p) => sum + (p.heightMm || 24), 0) / sample.length;
+                count = visualPageCapacity(options, index, average);
+            }
 
             for (let n = 0; n < count; n += 1) {
                 const operation = randomOf(options.operations);
-                const { question, answer } = this.problemGenerator.generateUniqueProblem(
+                // Spread rather than destructure: visual problems carry a
+                // `figure` too, and picking fields by name would drop it.
+                const problem = this.problemGenerator.generateUniqueProblem(
                     operation,
                     type,
                     options.topics
                 );
-                problems.push({ question, answer, type });
+                problems.push({ ...problem, type });
             }
 
             pages.push({ type, problems });
@@ -111,10 +121,15 @@ export class WorksheetGenerator {
     }
 }
 
-/** "mixed" alternates equation pages with word-problem pages. */
+/** The page types "mixed" rotates through, in order. */
+const MIXED_ROTATION = ['equations', 'word', 'visual'];
+
+/** Which layout a given page of the worksheet uses. */
 function pageTypeFor(problemType, pageIndex) {
-    if (problemType === 'mixed') return pageIndex % 2 === 0 ? 'equations' : 'word';
-    return problemType === 'word' ? 'word' : 'equations';
+    if (problemType === 'mixed') return MIXED_ROTATION[pageIndex % MIXED_ROTATION.length];
+    if (problemType === 'word') return 'word';
+    if (problemType === 'visual') return 'visual';
+    return 'equations';
 }
 
 function randomOf(values) {
