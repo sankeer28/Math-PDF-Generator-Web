@@ -32,7 +32,7 @@
 }
 
 [data-theme="dark"] .btn-primary {
-    color: #0d1b2a;
+    color: #1e1b16;
 }
 
 /* Download: the one action that produces a file, so it reads as a completion
@@ -50,7 +50,7 @@
 }
 
 [data-theme="dark"] .btn-success {
-    color: #04220f;
+    color: #06240f;
 }
 
 .btn-primary:hover:not(:disabled) {

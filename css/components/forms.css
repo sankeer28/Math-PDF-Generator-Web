@@ -161,7 +161,7 @@
 
 [data-theme="dark"] .checkbox-input:checked::after,
 [data-theme="dark"] .checkbox-input:indeterminate::after {
-    border-color: #0d1b2a;
+    border-color: #1e1b16;
 }
 
 .checkbox-text {

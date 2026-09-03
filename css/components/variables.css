@@ -3,26 +3,32 @@
    ============================================= */
 
 :root {
-    /* Light Theme (Default) - Blue-tinted */
-    --bg-primary: #f7f9fc;
-    --bg-secondary: #eef2f7;
-    --bg-tertiary: #e1e8f0;
-    --bg-elevated: #f7f9fc;
+    /*
+     * Light theme: paper and ink.
+     *
+     * The app makes printed worksheets, so the surfaces are warm paper and the
+     * emphasis is ink: graphite, not a colour. Green is spent on one thing only,
+     * the Download button, which is why it reads as the action on the page.
+     */
+    --bg-primary: #fffdf7;
+    --bg-secondary: #f2ece0;
+    --bg-tertiary: #e7ded0;
+    --bg-elevated: #fffdf7;
 
-    --text-primary: #1a202c;
-    --text-secondary: #4a5568;
-    --text-tertiary: #718096;
+    --text-primary: #201d17;
+    --text-secondary: #5a5244;
+    --text-tertiary: #8b8171;
 
-    --border-light: #cbd5e0;
-    --border-medium: #a0aec0;
-    --border-dark: #718096;
+    --border-light: #e0d6c5;
+    --border-medium: #c6b9a3;
+    --border-dark: #9a8d76;
 
-    --accent-primary: #3182ce;
-    --accent-hover: #2c5282;
-    --accent-light: #4299e1;
+    --accent-primary: #33302a;
+    --accent-hover: #16140f;
+    --accent-light: #6a6355;
 
-    --success: #1e9e4a;
-    --success-hover: #17803b;
+    --success: #2f7a46;
+    --success-hover: #256237;
     --success-light: #d4edda;
     --warning: #ffc107;
     --warning-light: #fff3cd;
@@ -31,10 +37,11 @@
     --info: #17a2b8;
     --info-light: #d1ecf1;
 
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+    /* Warm shadows: a neutral black shadow greys warm paper. */
+    --shadow-sm: 0 1px 3px rgba(74, 52, 26, 0.07);
+    --shadow-md: 0 4px 6px rgba(74, 52, 26, 0.09);
+    --shadow-lg: 0 10px 15px rgba(74, 52, 26, 0.12);
+    --shadow-xl: 0 20px 25px rgba(74, 52, 26, 0.14);
 
     --radius-sm: 4px;
     --radius-md: 8px;
@@ -53,11 +60,11 @@
     --font-mono: 'Courier New', Courier, monospace;
 
     /* Floating surfaces: translucent, so what scrolls beneath shows through. */
-    --glass-bg: rgba(255, 255, 255, 0.72);
-    --glass-border: rgba(255, 255, 255, 0.75);
-    --glass-shine: rgba(255, 255, 255, 0.9);
-    --glass-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 2px 6px -2px rgba(16, 24, 40, 0.08);
-    --glass-shadow-raised: 0 1px 2px rgba(16, 24, 40, 0.07), 0 6px 14px -6px rgba(16, 24, 40, 0.16);
+    --glass-bg: rgba(255, 253, 247, 0.78);
+    --glass-border: rgba(255, 255, 255, 0.8);
+    --glass-shine: rgba(255, 255, 255, 0.85);
+    --glass-shadow: 0 1px 2px rgba(74, 52, 26, 0.06), 0 2px 6px -2px rgba(74, 52, 26, 0.10);
+    --glass-shadow-raised: 0 1px 2px rgba(74, 52, 26, 0.08), 0 6px 14px -6px rgba(74, 52, 26, 0.18);
 
     --transition-fast: 150ms ease;
     --transition-base: 250ms ease;
@@ -66,27 +73,28 @@
 
 /* Dark Theme */
 [data-theme="dark"] {
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #242424;
-    --bg-tertiary: #2d2d2d;
-    --bg-elevated: #333333;
+    /* Dark theme: lamplight on the same paper, so the greys stay warm. */
+    --bg-primary: #1e1b16;
+    --bg-secondary: #16130f;
+    --bg-tertiary: #2b261e;
+    --bg-elevated: #353026;
 
-    --text-primary: #f8f9fa;
-    --text-secondary: #adb5bd;
-    --text-tertiary: #6c757d;
+    --text-primary: #f6f1e6;
+    --text-secondary: #b9af9c;
+    --text-tertiary: #877e6d;
 
-    --border-light: #3d3d3d;
-    --border-medium: #4a4a4a;
-    --border-dark: #5a5a5a;
+    --border-light: #332e25;
+    --border-medium: #453e33;
+    --border-dark: #5b5245;
 
     /* A real accent in dark mode too: the previous grey made primary buttons,
        step markers and links read as disabled. */
-    --accent-primary: #4c9aff;
-    --accent-hover: #75b1ff;
-    --accent-light: #2b6cb0;
+    --accent-primary: #ece5d6;
+    --accent-hover: #ffffff;
+    --accent-light: #8d8474;
 
-    --success: #3fbf74;
-    --success-hover: #34a563;
+    --success: #55c281;
+    --success-hover: #45a86c;
     --success-light: #2d3748;
     --warning: #ecc94b;
     --warning-light: #2d3748;
@@ -95,9 +103,9 @@
     --info: #4299e1;
     --info-light: #2d3748;
 
-    --glass-bg: rgba(30, 31, 34, 0.72);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-shine: rgba(255, 255, 255, 0.12);
+    --glass-bg: rgba(30, 27, 22, 0.78);
+    --glass-border: rgba(255, 255, 255, 0.07);
+    --glass-shine: rgba(255, 255, 255, 0.08);
     --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 6px -2px rgba(0, 0, 0, 0.45);
     --glass-shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.45), 0 6px 14px -6px rgba(0, 0, 0, 0.6);
 
@@ -109,9 +117,9 @@
 
 /* Focus Ring */
 :root {
-    --focus-ring: 0 0 0 3px rgba(49, 130, 206, 0.25);
+    --focus-ring: 0 0 0 3px rgba(51, 48, 42, 0.22);
 }
 
 [data-theme="dark"] {
-    --focus-ring: 0 0 0 3px rgba(66, 153, 225, 0.35);
+    --focus-ring: 0 0 0 3px rgba(236, 229, 214, 0.28);
 }

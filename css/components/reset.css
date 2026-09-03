@@ -16,7 +16,7 @@ html {
 
 body {
     font-family: var(--font-sans);
-    background: linear-gradient(135deg, #f7f9fc 0%, #eef4f9 50%, #e8f0f7 100%);
+    background: linear-gradient(160deg, #f6f1e6 0%, #f2ece0 45%, #ece3d4 100%);
     background-attachment: fixed;
     color: var(--text-primary);
     line-height: 1.6;
@@ -25,7 +25,7 @@ body {
 }
 
 [data-theme="dark"] body {
-    background: linear-gradient(135deg, #1a1a1a 0%, #242424 50%, #1e1e1e 100%);
+    background: linear-gradient(160deg, #1a1712 0%, #16130f 45%, #12100c 100%);
     background-attachment: fixed;
 }
 
