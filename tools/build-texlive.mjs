@@ -118,7 +118,7 @@ async function downloadPackages() {
         const archive = path.join(DOWNLOADS, `${name}.tar.xz`);
         if (!fs.existsSync(archive)) {
             console.log(`Downloading ${name}...`);
-            const response = await fetch(`${CTAN_ARCHIVE}/${name}.tar.xz`);
+            const response = await fetch(`${CTAN_ARCHIVE}/${name}.tar.xz`, { signal: AbortSignal.timeout(60_000) });
             if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`);
             fs.writeFileSync(archive, Buffer.from(await response.arrayBuffer()));
         }
